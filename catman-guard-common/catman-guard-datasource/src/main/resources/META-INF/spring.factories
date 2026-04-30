@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.AutoConfigurationImportFilter=\
+org.davision1dyx.catmanguard.datasource.config.DataSourceAutoConfigurationExclude

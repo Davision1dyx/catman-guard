@@ -1,0 +1,16 @@
+server:
+  port: 9988
+catman:
+  file:
+    mode: local
+    local:
+      path: /home/catman
+  datasource:
+    url: jdbc:postgresql://192.168.1.88:5555/rag_test
+    username: pgvector
+    password: pgvector
+    driver-class-name: org.postgresql.Driver
+    connection-timeout: 30000
+    maximum-pool-size: 10
+    minimum-idle: 10
+    idle-timeout: 600000
