@@ -1,5 +1,10 @@
 server:
   port: 9981
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
 catman:
   datasource:
     url: jdbc:postgresql://192.168.1.88:5555/rag_test
@@ -10,3 +15,20 @@ catman:
     maximum-pool-size: 10
     minimum-idle: 10
     idle-timeout: 600000
+  toolcall:
+    mcp:
+      tavily:
+        key: @tavily.key@
+        url: https://mcp.tavily.com/mcp/
+spring:
+  main:
+    web-application-type: reactive
+  ai:
+    openai:
+      api-key: @api.key@
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/
+      chat:
+        options:
+          max-tokens: 4096
+          temperature: 0.7
+          model: qwen-plus

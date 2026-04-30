@@ -15,7 +15,7 @@ public class FileProperties {
     private MinioProperties minio;
     private FileMode mode;
 
-    public class LocalProperties {
+    public static class LocalProperties {
         private String path;
 
         public String getPath() {
@@ -27,7 +27,7 @@ public class FileProperties {
         }
     }
 
-    public class MinioProperties {
+    public static class MinioProperties {
         private String endpoint;
         private String bucketName;
         private String accessKey;

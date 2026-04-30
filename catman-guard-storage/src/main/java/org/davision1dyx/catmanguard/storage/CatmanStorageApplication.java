@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @date 2026-04-30
  * @description 存储模块启动类
  */
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "org.davision1dyx.catmanguard")
 public class CatmanStorageApplication {
 
     public static void main(String[] args) {

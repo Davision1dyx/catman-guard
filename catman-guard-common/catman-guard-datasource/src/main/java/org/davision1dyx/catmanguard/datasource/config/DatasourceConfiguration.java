@@ -5,8 +5,12 @@ import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.davision1dyx.catmanguard.datasource.handle.MetaDataHandler;
 import org.davision1dyx.catmanguard.datasource.properties.DatasourceProperties;
+import org.mybatis.spring.SqlSessionFactoryBean;
+import org.mybatis.spring.SqlSessionTemplate;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import com.zaxxer.hikari.HikariConfig;
@@ -22,6 +26,7 @@ import javax.sql.DataSource;
  * @description
  */
 @Configuration
+@MapperScan("org.davision1dyx.catmanguard.*.mapper")
 @EnableConfigurationProperties(value = DatasourceProperties.class)
 public class DatasourceConfiguration {
 
@@ -66,6 +71,25 @@ public class DatasourceConfiguration {
         }
         
         return new HikariDataSource(config);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(value = SqlSessionFactory.class)
+    public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
+        SqlSessionFactoryBean factoryBean = new SqlSessionFactoryBean();
+        factoryBean.setDataSource(dataSource);
+        // 如果你有 XML mapper（推荐加）
+//        factoryBean.setMapperLocations(
+//                new PathMatchingResourcePatternResolver()
+//                        .getResources("classpath*:mapper/**/*.xml")
+//        );
+        return factoryBean.getObject();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(value = SqlSessionTemplate.class)
+    public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
+        return new SqlSessionTemplate(sqlSessionFactory);
     }
 
     @Bean

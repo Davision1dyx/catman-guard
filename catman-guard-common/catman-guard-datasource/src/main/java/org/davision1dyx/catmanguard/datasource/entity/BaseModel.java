@@ -14,7 +14,7 @@ public class BaseModel {
     * 主键
     */
    @TableId(type = IdType.AUTO)
-   private Integer id;
+   private Long id;
    /**
     * 创建时间
     */
@@ -38,11 +38,11 @@ public class BaseModel {
    @TableField(fill = FieldFill.INSERT)
    private Integer lockVersion;
 
-   public Integer getId() {
+   public Long getId() {
       return id;
    }
 
-   public void setId(Integer id) {
+   public void setId(Long id) {
       this.id = id;
    }
 

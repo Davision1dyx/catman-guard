@@ -21,6 +21,11 @@
     <dependencies>
         <dependency>
             <groupId>org.davision1dyx</groupId>
+            <artifactId>catman-guard-api</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.davision1dyx</groupId>
             <artifactId>catman-guard-datasource</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
@@ -38,6 +43,15 @@
             <groupId>org.davision1dyx</groupId>
             <artifactId>catman-guard-cache</artifactId>
             <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.davision1dyx</groupId>
+            <artifactId>catman-guard-toolcall</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-openai</artifactId>
         </dependency>
     </dependencies>
 
