@@ -26,13 +26,20 @@ public class FileController {
         this.fileService = fileService;
     }
 
+    /**
+     * 文件上传
+     * @param file
+     * @param title
+     * @param description
+     * @return
+     */
     @GetMapping("/upload")
     public FileUploadVO upload(@RequestParam MultipartFile file,
-                               @RequestParam String tag,
-                               @RequestParam String version) {
-        log.info("[GET] /processing/catman/storage/file/upload, file: {}, tag: {}, version: {}",
-                file.getOriginalFilename(), tag, version);
-        FileUploadDTO fileUploadDTO = FileUploadDTO.build(file, tag, version);
+                               @RequestParam String title,
+                               @RequestParam String description) {
+        log.info("[GET] /processing/catman/storage/file/upload, file: {}, title: {}, description: {}",
+                file.getOriginalFilename(), title, description);
+        FileUploadDTO fileUploadDTO = FileUploadDTO.build(file, title, description);
         return fileService.upload(fileUploadDTO);
     }
 }

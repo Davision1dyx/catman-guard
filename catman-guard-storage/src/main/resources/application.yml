@@ -1,6 +1,8 @@
 server:
   port: 9980
 catman:
+  recognition:
+    mineru-endpoint: http://localhost:8000
   file:
     mode: minio
     minio:

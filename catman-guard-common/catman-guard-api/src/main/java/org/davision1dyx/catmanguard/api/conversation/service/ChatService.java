@@ -5,7 +5,7 @@ import reactor.core.publisher.Flux;
 /**
  * @author Davison
  * @date 2026-04-30
- * @description
+ * @description 聊天服务
  */
 public interface ChatService {
 

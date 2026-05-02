@@ -4,11 +4,14 @@ import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import lombok.extern.slf4j.Slf4j;
 import org.davision1dyx.catmanguard.base.constant.CommonConstant;
+import org.davision1dyx.catmanguard.base.util.FileUtil;
 import org.davision1dyx.catmanguard.file.enums.FileMode;
 import org.davision1dyx.catmanguard.file.properties.FileProperties;
+import org.davision1dyx.catmanguard.storage.pojo.StorageHandleInfo;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.util.UUID;
 
 /**
@@ -34,9 +37,9 @@ public class MinioStorageStrategy implements StorageStrategy {
     }
 
     @Override
-    public String upload(MultipartFile file) {
+    public StorageHandleInfo upload(MultipartFile file) {
         try {
-            String fileType = getFileType(file.getOriginalFilename());
+            String fileType = FileUtil.getFileType(file.getOriginalFilename());
             String objectName = UUID.randomUUID() + "." + fileType;
             String endpoint = fileProperties.getMinio().getEndpoint();
             String bucketName = fileProperties.getMinio().getBucketName();
@@ -48,9 +51,31 @@ public class MinioStorageStrategy implements StorageStrategy {
                             .contentType(file.getContentType())
                             .build()
             );
-            return endpoint + CommonConstant.FILE_SEPARATOR + bucketName + CommonConstant.FILE_SEPARATOR + objectName;
+            return new StorageHandleInfo(objectName,
+                    endpoint + CommonConstant.FILE_SEPARATOR + bucketName + CommonConstant.FILE_SEPARATOR + objectName);
         } catch (Exception e) {
             log.error("文件上传失败, 文件名：{}", file.getName(), e);
+            return null;
+        }
+    }
+
+    @Override
+    public StorageHandleInfo upload(byte[] bytes, String fileName, String contentType) {
+        try {
+            String endpoint = fileProperties.getMinio().getEndpoint();
+            String bucketName = fileProperties.getMinio().getBucketName();
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(fileName)
+                            .stream(new ByteArrayInputStream(bytes), bytes.length, -1)
+                            .contentType(contentType)
+                            .build()
+            );
+            return new StorageHandleInfo(fileName,
+                    endpoint + CommonConstant.FILE_SEPARATOR + bucketName + CommonConstant.FILE_SEPARATOR + fileName);
+        } catch (Exception e) {
+            log.error("文件上传失败, 文件名：{}", fileName, e);
             return null;
         }
     }

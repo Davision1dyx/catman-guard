@@ -2,8 +2,10 @@ package org.davision1dyx.catmanguard.storage.handle.storage.strategy;
 
 import lombok.extern.slf4j.Slf4j;
 import org.davision1dyx.catmanguard.base.constant.CommonConstant;
+import org.davision1dyx.catmanguard.base.util.FileUtil;
 import org.davision1dyx.catmanguard.file.enums.FileMode;
 import org.davision1dyx.catmanguard.file.properties.FileProperties;
+import org.davision1dyx.catmanguard.storage.pojo.StorageHandleInfo;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,16 +33,29 @@ public class LocalStorageStrategy implements StorageStrategy {
     }
 
     @Override
-    public String upload(MultipartFile file) {
+    public StorageHandleInfo upload(MultipartFile file) {
         try {
-            String fileType = getFileType(file.getOriginalFilename());
+            String fileType = FileUtil.getFileType(file.getOriginalFilename());
             String basePath = fileProperties.getLocal().getPath();
-            String name = UUID.randomUUID().toString();
-            String filePath = basePath + CommonConstant.FILE_SEPARATOR + name + "." + fileType;
+            String fileName = UUID.randomUUID().toString() + CommonConstant.DOT + fileType;
+            String filePath = basePath + CommonConstant.FILE_SEPARATOR + fileName;
             file.transferTo(new File(filePath));
-            return filePath;
+            return new StorageHandleInfo(fileName, filePath);
         } catch (Exception e) {
             log.error("文件上传失败, 文件名：{}", file.getName(), e);
+            return null;
+        }
+    }
+
+    @Override
+    public StorageHandleInfo upload(byte[] bytes, String fileName, String contentType) {
+        try {
+            String basePath = fileProperties.getLocal().getPath();
+            String filePath = basePath + CommonConstant.FILE_SEPARATOR + fileName;
+            FileUtil.writeBytes(bytes, filePath);
+            return new StorageHandleInfo(fileName, filePath);
+        } catch (Exception e) {
+            log.error("文件上传失败, 文件名：{}", fileName, e);
             return null;
         }
     }

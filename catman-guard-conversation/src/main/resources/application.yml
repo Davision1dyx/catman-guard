@@ -32,3 +32,14 @@ spring:
           max-tokens: 4096
           temperature: 0.7
           model: qwen-plus
+logging:
+  level:
+    org:
+      springframework:
+        ai: TRACE
+
+      davision1dyx:
+        catmanguard:
+          conversation:
+            service:
+              MultiModalServiceImpl: DEBUG

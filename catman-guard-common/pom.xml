@@ -22,6 +22,7 @@
         <module>catman-guard-webflux</module>
         <module>catman-guard-toolcall</module>
         <module>catman-guard-api</module>
+        <module>catman-guard-recognition</module>
     </modules>
 
     <properties>

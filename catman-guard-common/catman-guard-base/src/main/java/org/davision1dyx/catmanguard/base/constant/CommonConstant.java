@@ -9,6 +9,7 @@ public class CommonConstant {
     public static String COLON = ":";
     public static String SEMICOLON = ";";
     public static String COMMA = ",";
+    public static String DOT = ".";
     public static String EMPTY = "";
     public static String BLANK = " ";
     public static String NEW_LINE = "\n";

@@ -10,5 +10,12 @@ import lombok.Data;
 @Data
 public class FileUploadVO {
     private String fileId;
-    private String status;
+    private String fileUrl;
+
+    public static FileUploadVO build(String fileId, String fileUrl, String status) {
+        FileUploadVO fileUploadVO = new FileUploadVO();
+        fileUploadVO.setFileId(fileId);
+        fileUploadVO.setFileUrl(fileUrl);
+        return fileUploadVO;
+    }
 }

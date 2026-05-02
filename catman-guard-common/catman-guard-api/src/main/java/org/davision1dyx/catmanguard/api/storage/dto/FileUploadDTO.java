@@ -12,14 +12,14 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileUploadDTO {
 
     private MultipartFile file;
-    private String version;
-    private String tag;
+    private String fileTitle;
+    private String description;
 
-    public static FileUploadDTO build(MultipartFile file, String version, String tag) {
+    public static FileUploadDTO build(MultipartFile file, String fileTitle, String description) {
         FileUploadDTO fileUploadDTO = new FileUploadDTO();
         fileUploadDTO.setFile(file);
-        fileUploadDTO.setVersion(version);
-        fileUploadDTO.setTag(tag);
+        fileUploadDTO.setFileTitle(fileTitle);
+        fileUploadDTO.setDescription(description);
         return fileUploadDTO;
     }
 }
