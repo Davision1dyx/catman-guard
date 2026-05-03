@@ -25,15 +25,21 @@ public class StorageHandler {
         this.storageStrategies = storageStrategies;
     }
 
-    public StorageHandleInfo handle(MultipartFile file, FileMode fileMode) {
+    public StorageHandleInfo handleUpload(MultipartFile file, FileMode fileMode) {
         Optional<StorageHandleInfo> upload = storageStrategies.stream().filter(strategy -> strategy.support(fileMode))
                 .map(strategy -> strategy.upload(file)).findFirst();
         return upload.orElseThrow(() -> new BizException(ErrorCode.NO_FILE_TYPE_SUPPORT));
     }
 
-    public StorageHandleInfo handle(byte[] bytes, String fileName, String contentType, FileMode fileMode) {
+    public StorageHandleInfo handleUpload(byte[] bytes, String fileName, String contentType, FileMode fileMode) {
         Optional<StorageHandleInfo> upload = storageStrategies.stream().filter(strategy -> strategy.support(fileMode))
                 .map(strategy -> strategy.upload(bytes, fileName, contentType)).findFirst();
         return upload.orElseThrow(() -> new BizException(ErrorCode.NO_FILE_TYPE_SUPPORT));
+    }
+
+    public byte[] handleDownload(String fileUrl, FileMode fileMode) {
+        Optional<byte[]> download = storageStrategies.stream().filter(strategy -> strategy.support(fileMode))
+                .map(strategy -> strategy.download(fileUrl)).findFirst();
+        return download.orElseThrow(() -> new BizException(ErrorCode.NO_FILE_TYPE_SUPPORT));
     }
 }

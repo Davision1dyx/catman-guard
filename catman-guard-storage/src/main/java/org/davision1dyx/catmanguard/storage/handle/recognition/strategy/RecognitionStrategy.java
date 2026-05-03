@@ -1,8 +1,10 @@
 package org.davision1dyx.catmanguard.storage.handle.recognition.strategy;
 
+import org.springframework.ai.document.Document;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * @author Davison
@@ -11,7 +13,25 @@ import java.io.IOException;
  */
 public interface RecognitionStrategy {
 
-    boolean support(MultipartFile multipartFile);
+    /**
+     * 是否支持该文件类型
+     *
+     * @param fileType@return
+     */
+    boolean support(String fileType);
 
+    /**
+     * OCR识别，转换成可操作文件
+     * @param file
+     * @return
+     * @throws IOException
+     */
     String recognize(MultipartFile file) throws IOException;
+
+    /**
+     * 读取文件内容
+     *
+     * @param bytes@return
+     */
+    List<Document> read(byte[] bytes);
 }

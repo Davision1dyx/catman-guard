@@ -1,5 +1,7 @@
 package org.davision1dyx.catmanguard.storage.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.davision1dyx.catmanguard.api.conversation.service.MultiModalService;
@@ -16,11 +18,14 @@ import org.davision1dyx.catmanguard.base.util.FileUtil;
 import org.davision1dyx.catmanguard.file.enums.FileMode;
 import org.davision1dyx.catmanguard.file.properties.FileProperties;
 import org.davision1dyx.catmanguard.storage.convertor.FileInfoConvertor;
+import org.davision1dyx.catmanguard.storage.enums.FileStatus;
+import org.davision1dyx.catmanguard.storage.handle.recognition.ReaderHandler;
 import org.davision1dyx.catmanguard.storage.handle.recognition.RecognitionHandler;
 import org.davision1dyx.catmanguard.storage.handle.storage.StorageHandler;
 import org.davision1dyx.catmanguard.storage.mapper.FileInfoMapper;
 import org.davision1dyx.catmanguard.storage.model.FileInfo;
 import org.davision1dyx.catmanguard.storage.pojo.StorageHandleInfo;
+import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,7 +35,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -47,20 +54,23 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
     private final FileProperties fileProperties;
     private final StorageHandler storageHandler;
     private final RecognitionHandler recognitionHandler;
+    private final ReaderHandler readerHandler;
     private final MultiModalService multiModalService;
 
-    public FileServiceImpl(FileProperties fileProperties, StorageHandler storageHandler, RecognitionHandler recognitionHandler, MultiModalService multiModalService) {
+    public FileServiceImpl(FileProperties fileProperties, StorageHandler storageHandler, RecognitionHandler recognitionHandler, ReaderHandler readerHandler, MultiModalService multiModalService) {
         this.fileProperties = fileProperties;
         this.storageHandler = storageHandler;
         this.recognitionHandler = recognitionHandler;
+        this.readerHandler = readerHandler;
         this.multiModalService = multiModalService;
     }
 
     @Override
     public FileUploadVO upload(FileUploadDTO fileUploadDTO) {
+        log.info("开始上传文件: {}", fileUploadDTO.getFile().getOriginalFilename());
         // 1. 源文件存储到存储介质
         FileMode mode = fileProperties.getMode();
-        StorageHandleInfo storageHandleInfo = storageHandler.handle(fileUploadDTO.getFile(), mode);
+        StorageHandleInfo storageHandleInfo = storageHandler.handleUpload(fileUploadDTO.getFile(), mode);
 
         // 2. 保存文件信息到数据库
         FileInfo fileInfo = FileInfoConvertor.INSTANCE.mapToModel(fileUploadDTO, storageHandleInfo.getFileName(),
@@ -71,6 +81,8 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
 
     @Override
     public FileRecognizeVO recognize(FileRecognizeDTO fileRecognizeDTO) throws IOException {
+        // 0. 更新状态
+        update(new LambdaUpdateWrapper<FileInfo>().eq(FileInfo::getFileId, fileRecognizeDTO.getFileId()).set(FileInfo::getStatus, FileStatus.CONVERTING.name()));
         // 1. 文件OCR识别
         MultipartFile file = fileRecognizeDTO.getFile();
         String recognizedPath = recognitionHandler.handle(file);
@@ -112,7 +124,7 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
             byte[] imageBytes = FileUtil.readFileToBytes(imagePath);
             String contentType = FileUtil.getImageContentType(imageName);
             String objectName = baseObjectName + "images/" + imageName;
-            StorageHandleInfo storageHandleInfo = storageHandler.handle(imageBytes, objectName, contentType, fileMode);
+            StorageHandleInfo storageHandleInfo = storageHandler.handleUpload(imageBytes, objectName, contentType, fileMode);
             String imageUrl = storageHandleInfo.getUrl();
             imageUrlMap.put(imageName, imageUrl);
             log.info("图片已上传 {} -> {}", imageName, imageUrl);
@@ -126,15 +138,47 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
 
         // 上传处理后的 md 文件到 MinIO
         String mdObjectName = baseObjectName + mdFile.getFileName().toString();
-        StorageHandleInfo storageHandleInfo = storageHandler.handle(processedMdContent.getBytes(StandardCharsets.UTF_8), mdObjectName,
+        StorageHandleInfo storageHandleInfo = storageHandler.handleUpload(processedMdContent.getBytes(StandardCharsets.UTF_8), mdObjectName,
                 "text/markdown", fileMode);
-        log.info("Markdown 文件已上传, url: {}", storageHandleInfo.getUrl());
+        String convertedUrl = storageHandleInfo.getUrl();
+        log.info("Markdown 文件已上传, url: {}", convertedUrl);
 
-        return FileRecognizeVO.build(storageHandleInfo.getUrl());
+        // 3. 更新状态
+        update(new LambdaUpdateWrapper<FileInfo>()
+                .eq(FileInfo::getFileId, fileRecognizeDTO.getFileId())
+                .set(FileInfo::getConvertedUrl, convertedUrl)
+                .set(FileInfo::getStatus, FileStatus.CONVERTED.name()));
+
+        return FileRecognizeVO.build(convertedUrl);
     }
 
     @Override
     public FileSplitVO split(FileSplitDTO fileSplitDTO) {
+        FileInfo fileInfo = getOne(new LambdaQueryWrapper<FileInfo>().eq(FileInfo::getFileId, fileSplitDTO.getFileId()));
+        if (fileInfo == null) {
+            throw new BizException(ErrorCode.ERROR, "文件不存在");
+        }
+        if (!Objects.equals(fileInfo.getStatus(), FileStatus.CONVERTED.name())) {
+            throw new BizException(ErrorCode.ERROR, "文件未完成转换");
+        }
+        log.info("开始分割文件: {}", fileInfo.getFileName());
+        FileMode fileMode = fileProperties.getMode();
+        // 1. 下载文件
+        byte[] fileBytes = storageHandler.handleDownload(fileInfo.getConvertedUrl(), fileMode);
+
+        // 2. 切分文件 // TODO 待完善切分，当前读取文件内容，只需要读取md格式
+        List<Document> documents = readerHandler.handle(fileBytes, fileInfo.getFileType());
+        log.info("文件已切分, 数量: {}", documents.size());
+
+        // 3. 保存切分结果
+        for (Document document : documents) {
+
+        }
+
+        // 4. 更新状态
+        fileInfo.setStatus(FileStatus.CHUNKED.name());
+        updateById(fileInfo);
+
         return null;
     }
 

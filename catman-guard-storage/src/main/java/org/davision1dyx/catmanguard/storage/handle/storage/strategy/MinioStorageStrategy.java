@@ -1,5 +1,7 @@
 package org.davision1dyx.catmanguard.storage.handle.storage.strategy;
 
+import io.minio.GetObjectArgs;
+import io.minio.GetObjectResponse;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +10,7 @@ import org.davision1dyx.catmanguard.base.util.FileUtil;
 import org.davision1dyx.catmanguard.file.enums.FileMode;
 import org.davision1dyx.catmanguard.file.properties.FileProperties;
 import org.davision1dyx.catmanguard.storage.pojo.StorageHandleInfo;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,11 +27,12 @@ import java.util.UUID;
 public class MinioStorageStrategy implements StorageStrategy {
 
     private final FileProperties fileProperties;
-    private final MinioClient minioClient;
 
-    public MinioStorageStrategy(FileProperties fileProperties, MinioClient minioClient) {
+    @Autowired(required = false)
+    private MinioClient minioClient;
+
+    public MinioStorageStrategy(FileProperties fileProperties) {
         this.fileProperties = fileProperties;
-        this.minioClient = minioClient;
     }
 
     @Override
@@ -76,6 +80,25 @@ public class MinioStorageStrategy implements StorageStrategy {
                     endpoint + CommonConstant.FILE_SEPARATOR + bucketName + CommonConstant.FILE_SEPARATOR + fileName);
         } catch (Exception e) {
             log.error("文件上传失败, 文件名：{}", fileName, e);
+            return null;
+        }
+    }
+
+    @Override
+    public byte[] download(String fileUrl) {
+        try {
+            String endpoint = fileProperties.getMinio().getEndpoint();
+            String bucketName = fileProperties.getMinio().getBucketName();
+            String objectName = fileUrl.replace(endpoint + CommonConstant.FILE_SEPARATOR + bucketName + CommonConstant.FILE_SEPARATOR, "");
+            GetObjectResponse getObjectResponse = minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectName)
+                            .build()
+            );
+            return getObjectResponse.readAllBytes();
+        } catch (Exception e) {
+            log.error("文件下载失败, 文件名：{}", fileUrl, e);
             return null;
         }
     }

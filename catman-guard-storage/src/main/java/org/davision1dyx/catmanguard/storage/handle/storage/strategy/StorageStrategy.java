@@ -16,4 +16,6 @@ public interface StorageStrategy {
     StorageHandleInfo upload(MultipartFile file);
 
     StorageHandleInfo upload(byte[] bytes, String fileName, String contentType);
+
+    byte[] download(String fileUrl);
 }

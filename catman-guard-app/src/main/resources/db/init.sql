@@ -84,3 +84,34 @@ COMMENT ON COLUMN file_info.create_time IS '创建时间';
 COMMENT ON COLUMN file_info.update_time IS '更新时间';
 COMMENT ON COLUMN file_info.lock_version IS '锁版本';
 COMMENT ON COLUMN file_info.deleted IS '是否删除';
+
+CREATE TABLE file_chunk (
+    id BIGSERIAL PRIMARY KEY,
+    chunk_id VARCHAR(255) NOT NULL,
+    file_id VARCHAR(255) NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    meta_data VARCHAR(500),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    lock_version INT DEFAULT 0,
+    deleted INT DEFAULT 0
+);
+
+-- 索引
+CREATE UNIQUE INDEX uk_chunk_id ON file_chunk(chunk_id);
+CREATE INDEX idx_file_id ON file_chunk(file_id);
+CREATE UNIQUE INDEX uk_file_index ON file_chunk(file_id, chunk_index);
+
+-- 字段注释
+COMMENT ON TABLE file_chunk IS '文件分片表,存储文件切分后的片段';
+COMMENT ON COLUMN file_chunk.id IS '主键ID';
+COMMENT ON COLUMN file_chunk.chunk_id IS '分片唯一标识(UUID)';
+COMMENT ON COLUMN file_chunk.file_id IS '文件ID';
+COMMENT ON COLUMN file_chunk.chunk_index IS '分片序号';
+COMMENT ON COLUMN file_chunk.content IS '分片内容';
+COMMENT ON COLUMN file_chunk.meta_data IS '元数据';
+COMMENT ON COLUMN file_chunk.create_time IS '创建时间';
+COMMENT ON COLUMN file_chunk.update_time IS '更新时间';
+COMMENT ON COLUMN file_info.lock_version IS '锁版本';
+COMMENT ON COLUMN file_info.deleted IS '是否删除';

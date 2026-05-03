@@ -23,7 +23,7 @@ public interface FileInfoConvertor {
     @Mapping(source = "url", target = "url")
     @Mapping(source = "fileName", target = "fileName")
     @Mapping(source = "mode.name()", target = "storageType")
-    @Mapping(target = "status", expression = "java(FileStatus.INIT.name())")
+    @Mapping(target = "status", expression = "java(FileStatus.UPLOADED.name())")
     @Mapping(target = "fileType", expression = "java(FileUtil.getFileType(fileUploadDTO.getFile().getOriginalFilename()))")
     FileInfo mapToModel(FileUploadDTO fileUploadDTO, String fileName, String url, FileMode mode);
 

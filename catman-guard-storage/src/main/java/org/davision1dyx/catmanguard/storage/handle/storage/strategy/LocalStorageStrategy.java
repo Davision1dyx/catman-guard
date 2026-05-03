@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.UUID;
 
 /**
@@ -56,6 +57,16 @@ public class LocalStorageStrategy implements StorageStrategy {
             return new StorageHandleInfo(fileName, filePath);
         } catch (Exception e) {
             log.error("文件上传失败, 文件名：{}", fileName, e);
+            return null;
+        }
+    }
+
+    @Override
+    public byte[] download(String fileUrl) {
+        try {
+            return FileUtil.readFileToBytes(Paths.get(fileUrl));
+        } catch (Exception e) {
+            log.error("文件下载失败, 文件名：{}", fileUrl, e);
             return null;
         }
     }

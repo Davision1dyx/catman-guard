@@ -1,8 +1,18 @@
 server:
   port: 9988
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
 catman:
   file:
     mode: local
+    minio:
+      endpoint: http://localhost:9001
+      accessKey: minioadmin
+      secretKey: minioadmin
+      bucketName: catman
     local:
       path: /home/catman
   datasource:
@@ -14,3 +24,22 @@ catman:
     maximum-pool-size: 10
     minimum-idle: 10
     idle-timeout: 600000
+  toolcall:
+    mcp:
+      tavily:
+        key: @tavily.key@
+        url: https://mcp.tavily.com/mcp/
+  recognition:
+    mineru-endpoint: http://localhost:8000
+spring:
+  main:
+    web-application-type: servlet
+  ai:
+    openai:
+      api-key: @api.key@
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/
+      chat:
+        options:
+          max-tokens: 4096
+          temperature: 0.7
+          model: qwen-plus
