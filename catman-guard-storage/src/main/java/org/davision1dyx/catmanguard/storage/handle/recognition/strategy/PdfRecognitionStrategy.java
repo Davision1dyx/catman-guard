@@ -4,18 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.davision1dyx.catmanguard.base.util.FileUtil;
 import org.davision1dyx.catmanguard.recognition.tool.MinerURecognizeTool;
 import org.davision1dyx.catmanguard.storage.enums.FileType;
-import org.springframework.ai.document.Document;
-import org.springframework.ai.reader.ExtractedTextFormatter;
-import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
-import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -28,7 +22,6 @@ import java.util.UUID;
 public class PdfRecognitionStrategy implements RecognitionStrategy{
 
     private final MinerURecognizeTool minerURecognizeTool;
-    private final static String unzipTmpPath = "/home/catman/tmp";
 
     public PdfRecognitionStrategy(MinerURecognizeTool minerURecognizeTool) {
         this.minerURecognizeTool = minerURecognizeTool;
@@ -57,20 +50,5 @@ public class PdfRecognitionStrategy implements RecognitionStrategy{
         log.info("Zip file extracted to: {}", extractDir);
 
         return extractDir;
-    }
-
-    @Override
-    public List<Document> read(byte[] bytes) {
-        PdfDocumentReaderConfig config = PdfDocumentReaderConfig.builder()
-                .withPageTopMargin(50)         // 忽略顶部50个单位的页眉
-                .withPageBottomMargin(50)      // 忽略底部50个单位的页脚
-                .withPagesPerDocument(1)       // 每一页作为一个 Document
-                .withPageExtractedTextFormatter(new ExtractedTextFormatter.Builder()
-                        .withNumberOfTopTextLinesToDelete(0) // 每页再额外删掉前0行
-                        .build())
-                .build();
-
-//        return new ParagraphPdfDocumentReader(new FileSystemResource(file), config).read();
-        return new PagePdfDocumentReader(new ByteArrayResource(bytes), config).read();
     }
 }

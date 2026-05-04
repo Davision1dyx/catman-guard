@@ -1,8 +1,8 @@
-package org.davision1dyx.catmanguard.storage.handle.recognition;
+package org.davision1dyx.catmanguard.storage.handle.reader;
 
 import org.davision1dyx.catmanguard.base.exception.BizException;
 import org.davision1dyx.catmanguard.base.exception.ErrorCode;
-import org.davision1dyx.catmanguard.storage.handle.recognition.strategy.RecognitionStrategy;
+import org.davision1dyx.catmanguard.storage.handle.reader.strategy.ReaderStrategy;
 import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Component;
 
@@ -16,14 +16,14 @@ import java.util.List;
 @Component
 public class ReaderHandler {
 
-    private final List<RecognitionStrategy> recognitionStrategies;
+    private final List<ReaderStrategy> readerStrategies;
 
-    public ReaderHandler(List<RecognitionStrategy> recognitionStrategies) {
-        this.recognitionStrategies = recognitionStrategies;
+    public ReaderHandler(List<ReaderStrategy> readerStrategies) {
+        this.readerStrategies = readerStrategies;
     }
 
     public List<Document> handle(byte[] bytes, String fileType) {
-        RecognitionStrategy recognitionStrategy = recognitionStrategies.stream()
+        ReaderStrategy recognitionStrategy = readerStrategies.stream()
                 .filter(strategy -> strategy.support(fileType))
                 .findFirst().orElseThrow(() -> new BizException(ErrorCode.NO_FILE_TYPE_SUPPORT));
         return recognitionStrategy.read(bytes);

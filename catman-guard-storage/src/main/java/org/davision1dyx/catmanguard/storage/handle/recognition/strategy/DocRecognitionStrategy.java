@@ -4,17 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.davision1dyx.catmanguard.base.util.FileUtil;
 import org.davision1dyx.catmanguard.recognition.tool.MinerURecognizeTool;
 import org.davision1dyx.catmanguard.storage.enums.FileType;
-import org.springframework.ai.document.Document;
-import org.springframework.ai.reader.tika.TikaDocumentReader;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -27,7 +22,6 @@ import java.util.UUID;
 public class DocRecognitionStrategy implements RecognitionStrategy{
 
     private final MinerURecognizeTool minerURecognizeTool;
-    private final static String unzipTmpPath = "/home/catman/tmp";
 
     public DocRecognitionStrategy(MinerURecognizeTool minerURecognizeTool) {
         this.minerURecognizeTool = minerURecognizeTool;
@@ -56,11 +50,5 @@ public class DocRecognitionStrategy implements RecognitionStrategy{
         log.info("Zip file extracted to: {}", extractDir);
 
         return extractDir;
-    }
-
-    @Override
-    public List<Document> read(byte[] bytes) {
-        Resource resource = new ByteArrayResource(bytes);
-        return new TikaDocumentReader(resource).get();
     }
 }

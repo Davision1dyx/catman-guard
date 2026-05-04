@@ -1,27 +1,22 @@
-package org.davision1dyx.catmanguard.storage.handle.recognition.strategy;
+package org.davision1dyx.catmanguard.storage.handle.reader.strategy;
 
+import org.davision1dyx.catmanguard.storage.enums.FileType;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.markdown.MarkdownDocumentReader;
 import org.springframework.ai.reader.markdown.config.MarkdownDocumentReaderConfig;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 /**
  * @author Davison
  * @date 2026-05-02
- * @description MARKDOWN识别策略
+ * @description MARKDOWN读取策略
  */
-public class MarkdownRecognitionStrategy implements RecognitionStrategy{
+public class MarkdownReaderStrategy implements ReaderStrategy {
     @Override
     public boolean support(String fileType) {
-        return false;
-    }
-
-    @Override
-    public String recognize(MultipartFile file) {
-        return null;
+        return FileType.MARKDOWN.suffix.contains(fileType);
     }
 
     @Override

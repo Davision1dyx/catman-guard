@@ -11,9 +11,9 @@ import java.util.stream.Collectors;
 /**
  * @author Davison
  * @date 2026-05-03
- * @description 文档数据清洗
+ * @description 文档数据清洗处理器
  */
-public class DocumentCleaner {
+public class DocumentCleanHandler {
 
     public static List<Document> cleanDocuments(List<Document> documents) {
         if (CollectionUtils.isEmpty(documents)) {

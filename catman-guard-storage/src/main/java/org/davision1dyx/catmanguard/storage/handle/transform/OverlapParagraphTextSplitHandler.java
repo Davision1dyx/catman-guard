@@ -12,9 +12,9 @@ import java.util.List;
 /**
  * @author Davison
  * @date 2026-05-03
- * @description 自定义重叠段落分片器
+ * @description 自定义重叠段落分片处理器
  */
-public class OverlapParagraphTextSplitter extends TextSplitter {
+public class OverlapParagraphTextSplitHandler extends TextSplitter {
 
     // 每块最大字符数
     private final int chunkSize;
@@ -22,7 +22,7 @@ public class OverlapParagraphTextSplitter extends TextSplitter {
     // 相邻块之间重叠字符数
     private final int overlap;
 
-    public OverlapParagraphTextSplitter(int chunkSize, int overlap) {
+    public OverlapParagraphTextSplitHandler(int chunkSize, int overlap) {
         if (chunkSize <= 0) {
             throw new IllegalArgumentException("chunkSize 必须大于 0");
         }

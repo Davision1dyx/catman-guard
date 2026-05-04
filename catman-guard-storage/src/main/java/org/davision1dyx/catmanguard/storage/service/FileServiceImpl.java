@@ -1,5 +1,6 @@
 package org.davision1dyx.catmanguard.storage.service;
 
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -17,12 +18,15 @@ import org.davision1dyx.catmanguard.base.exception.ErrorCode;
 import org.davision1dyx.catmanguard.base.util.FileUtil;
 import org.davision1dyx.catmanguard.file.enums.FileMode;
 import org.davision1dyx.catmanguard.file.properties.FileProperties;
+import org.davision1dyx.catmanguard.storage.convertor.FileChunkConvertor;
 import org.davision1dyx.catmanguard.storage.convertor.FileInfoConvertor;
 import org.davision1dyx.catmanguard.storage.enums.FileStatus;
-import org.davision1dyx.catmanguard.storage.handle.recognition.ReaderHandler;
+import org.davision1dyx.catmanguard.storage.handle.reader.ReaderHandler;
 import org.davision1dyx.catmanguard.storage.handle.recognition.RecognitionHandler;
 import org.davision1dyx.catmanguard.storage.handle.storage.StorageHandler;
+import org.davision1dyx.catmanguard.storage.handle.transform.OverlapParagraphTextSplitHandler;
 import org.davision1dyx.catmanguard.storage.mapper.FileInfoMapper;
+import org.davision1dyx.catmanguard.storage.model.FileChunk;
 import org.davision1dyx.catmanguard.storage.model.FileInfo;
 import org.davision1dyx.catmanguard.storage.pojo.StorageHandleInfo;
 import org.springframework.ai.document.Document;
@@ -34,10 +38,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -56,13 +57,15 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
     private final RecognitionHandler recognitionHandler;
     private final ReaderHandler readerHandler;
     private final MultiModalService multiModalService;
+    private final FileChunkServiceImpl fileChunkService;
 
-    public FileServiceImpl(FileProperties fileProperties, StorageHandler storageHandler, RecognitionHandler recognitionHandler, ReaderHandler readerHandler, MultiModalService multiModalService) {
+    public FileServiceImpl(FileProperties fileProperties, StorageHandler storageHandler, RecognitionHandler recognitionHandler, ReaderHandler readerHandler, MultiModalService multiModalService, FileChunkServiceImpl fileChunkService) {
         this.fileProperties = fileProperties;
         this.storageHandler = storageHandler;
         this.recognitionHandler = recognitionHandler;
         this.readerHandler = readerHandler;
         this.multiModalService = multiModalService;
+        this.fileChunkService = fileChunkService;
     }
 
     @Override
@@ -81,6 +84,8 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
 
     @Override
     public FileRecognizeVO recognize(FileRecognizeDTO fileRecognizeDTO) throws IOException {
+        // 只有PDF和DOC才需要识别
+
         // 0. 更新状态
         update(new LambdaUpdateWrapper<FileInfo>().eq(FileInfo::getFileId, fileRecognizeDTO.getFileId()).set(FileInfo::getStatus, FileStatus.CONVERTING.name()));
         // 1. 文件OCR识别
@@ -168,18 +173,26 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
 
         // 2. 切分文件 // TODO 待完善切分，当前读取文件内容，只需要读取md格式
         List<Document> documents = readerHandler.handle(fileBytes, fileInfo.getFileType());
-        log.info("文件已切分, 数量: {}", documents.size());
+        List<Document> splitDocuments = new OverlapParagraphTextSplitHandler(500, 10).split(documents);
+        log.info("文件已切分, 数量: {}", splitDocuments.size());
 
         // 3. 保存切分结果
-        for (Document document : documents) {
-
+        List<FileChunk> fileChunks = new ArrayList<>();
+        for (int i = 0; i < splitDocuments.size(); i++) {
+            Document document = splitDocuments.get(i);
+            FileChunk fileChunk = FileChunkConvertor.INSTANCE.mapToModel(fileInfo.getFileId(), i, document.getText(),
+                    JSON.toJSONString(document.getMetadata()));
+            fileChunks.add(fileChunk);
         }
+        fileChunkService.saveBatch(fileChunks); // todo 判断性能
 
         // 4. 更新状态
         fileInfo.setStatus(FileStatus.CHUNKED.name());
         updateById(fileInfo);
 
-        return null;
+        FileSplitVO vo = new FileSplitVO();
+        vo.setChunkSize(fileChunks.size());
+        return vo;
     }
 
     @Override

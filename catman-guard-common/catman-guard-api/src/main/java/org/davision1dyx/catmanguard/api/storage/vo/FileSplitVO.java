@@ -9,4 +9,5 @@ import lombok.Data;
  */
 @Data
 public class FileSplitVO {
+    private Integer chunkSize;
 }
