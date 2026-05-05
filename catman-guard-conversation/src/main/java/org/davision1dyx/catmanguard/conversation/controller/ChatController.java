@@ -35,4 +35,10 @@ public class ChatController {
         log.info("GET /processing/catman/conversation/chat/websearch, message: {}, conversationId: {}", message, conversationId);
         return chatService.webSearch(conversationId, message);
     }
+
+    @GetMapping("/retrieval")
+    public Flux<String> retrieval(@RequestParam String message, @RequestParam String conversationId) {
+        log.info("GET /processing/catman/conversation/chat/retrieval, message: {}, conversationId: {}", message, conversationId);
+        return chatService.retrieval(conversationId, message);
+    }
 }

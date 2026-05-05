@@ -57,9 +57,9 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
     private final RecognitionHandler recognitionHandler;
     private final ReaderHandler readerHandler;
     private final MultiModalService multiModalService;
-    private final FileChunkServiceImpl fileChunkService;
+    private final ChunkServiceImpl fileChunkService;
 
-    public FileServiceImpl(FileProperties fileProperties, StorageHandler storageHandler, RecognitionHandler recognitionHandler, ReaderHandler readerHandler, MultiModalService multiModalService, FileChunkServiceImpl fileChunkService) {
+    public FileServiceImpl(FileProperties fileProperties, StorageHandler storageHandler, RecognitionHandler recognitionHandler, ReaderHandler readerHandler, MultiModalService multiModalService, ChunkServiceImpl fileChunkService) {
         this.fileProperties = fileProperties;
         this.storageHandler = storageHandler;
         this.recognitionHandler = recognitionHandler;
@@ -181,18 +181,16 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
         for (int i = 0; i < splitDocuments.size(); i++) {
             Document document = splitDocuments.get(i);
             FileChunk fileChunk = FileChunkConvertor.INSTANCE.mapToModel(fileInfo.getFileId(), i, document.getText(),
-                    JSON.toJSONString(document.getMetadata()));
+                    JSON.toJSONString(document.getMetadata()), document.getId());
             fileChunks.add(fileChunk);
         }
-        fileChunkService.saveBatch(fileChunks); // todo 判断性能
+        fileChunkService.saveBatch(fileChunks); // 性能不足时，考虑手写批量保存逻辑
 
         // 4. 更新状态
         fileInfo.setStatus(FileStatus.CHUNKED.name());
         updateById(fileInfo);
 
-        FileSplitVO vo = new FileSplitVO();
-        vo.setChunkSize(fileChunks.size());
-        return vo;
+        return FileSplitVO.build(fileChunks.size());
     }
 
     @Override

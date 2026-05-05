@@ -91,4 +91,20 @@ public class CommonPrompt {
             4. 问题不要重复，也不要与当前问题完全相同。
             5. 问题要符合对话的上下文和主题。
             """.formatted(ZonedDateTime.now());
+
+    public static String RETRIEVAL_PROMPT = """
+            ## 任务
+            请基于以下提供的参考文档内容，回答用户的问题。
+            
+            ## 当前系统时间：
+            %s
+            
+            ## 要求
+            1. 如果参考文档中没有相关信息，请直接说明"没有找到相关信息"，不要编造内容。
+                
+            参考文档:
+            {documents}
+                
+            用户问题: {question}
+            """.formatted(ZonedDateTime.now());
 }

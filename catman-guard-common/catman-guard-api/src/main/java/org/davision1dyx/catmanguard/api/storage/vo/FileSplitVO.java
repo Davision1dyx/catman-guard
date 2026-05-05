@@ -10,4 +10,10 @@ import lombok.Data;
 @Data
 public class FileSplitVO {
     private Integer chunkSize;
+
+    public static FileSplitVO build(Integer chunkSize) {
+        FileSplitVO fileSplitVO = new FileSplitVO();
+        fileSplitVO.setChunkSize(chunkSize);
+        return fileSplitVO;
+    }
 }

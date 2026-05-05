@@ -2,6 +2,7 @@ package org.davision1dyx.catmanguard.conversation.service;
 
 import org.davision1dyx.catmanguard.api.conversation.service.ChatService;
 import org.davision1dyx.catmanguard.api.conversation.service.ContextSessionService;
+import org.davision1dyx.catmanguard.conversation.advisor.RetrievalAdvisor;
 import org.davision1dyx.catmanguard.conversation.agent.ChatAgent;
 import org.davision1dyx.catmanguard.conversation.agent.WebSearchAgent;
 import org.davision1dyx.catmanguard.conversation.manager.AgentTaskManager;
@@ -28,13 +29,15 @@ public class ChatServiceImpl implements ChatService {
     private final AgentTaskManager agentTaskManager;
     private final ContextSessionService contextSessionService;
     private final List<ToolCallback> tavilyToolCallbacks;
+    private final RetrievalAdvisor retrievalAdvisor;
 
     public ChatServiceImpl(ChatModel chatModel, AgentTaskManager agentTaskManager, ContextSessionService contextSessionService,
-                           CatmanMcpTool tavilyWebSearchTool) throws Exception {
+                           CatmanMcpTool tavilyWebSearchTool, RetrievalAdvisor retrievalAdvisor) throws Exception {
         this.chatModel = chatModel;
         this.agentTaskManager = agentTaskManager;
         this.contextSessionService = contextSessionService;
         this.tavilyToolCallbacks = tavilyWebSearchTool.initToolCallBack();
+        this.retrievalAdvisor = retrievalAdvisor;
     }
 
     @Override
@@ -75,5 +78,23 @@ public class ChatServiceImpl implements ChatService {
     @Override
     public boolean stop(String conversationId) {
         return agentTaskManager.stopTask(conversationId);
+    }
+
+    @Override
+    public Flux<String> retrieval(String conversationId, String query) {
+        ChatAgent chatAgent = ChatAgent.builder()
+                .chatModel(chatModel)
+                .name("retrievalAgent")
+                .maxRound(5)
+                .advisors(retrievalAdvisor)
+                .systemPrompt(CommonPrompt.ROLE_DEFINE)
+                .contextSessionService(contextSessionService)
+                .taskManager(agentTaskManager)
+                .build();
+
+        ChatMemory persistentChatMemory = chatAgent.createPersistentChatMemory(conversationId, 20);
+        chatAgent.setChatMemory(persistentChatMemory);
+
+        return chatAgent.stream(query, conversationId);
     }
 }

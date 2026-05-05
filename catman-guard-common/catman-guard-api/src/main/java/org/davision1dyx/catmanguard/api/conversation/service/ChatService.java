@@ -14,4 +14,6 @@ public interface ChatService {
     Flux<String> webSearch(String conversationId, String query);
 
     boolean stop(String conversationId);
+
+    Flux<String> retrieval(String conversationId, String query);
 }
