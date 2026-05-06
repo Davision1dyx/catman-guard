@@ -216,9 +216,8 @@
           <div class="form-item">
             <label>状态</label>
             <el-select v-model="newStaff.status">
-              <el-option value="ACTIVE" label="在职" />
+              <el-option value="ACTIVE" label="活跃" />
               <el-option value="ON_LEAVE" label="请假" />
-              <el-option value="INACTIVE" label="离职" />
             </el-select>
           </div>
         </form>
@@ -265,7 +264,7 @@ interface Staff {
  phone: string;
  groupId: string | null;
  groupName: string | null;
- status: 'ACTIVE' | 'ON_LEAVE' | 'INACTIVE';
+ status: 'ACTIVE' | 'ON_LEAVE';
  joinedAt: Date;
 }
 // 分组接口定义
