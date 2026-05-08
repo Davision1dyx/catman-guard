@@ -2,16 +2,14 @@ package org.davision1dyx.catmanguard.storage.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.davision1dyx.catmanguard.api.storage.dto.ChunkQueryDTO;
+import org.davision1dyx.catmanguard.api.storage.dto.FileListDTO;
 import org.davision1dyx.catmanguard.api.storage.dto.FileUploadDTO;
 import org.davision1dyx.catmanguard.api.storage.service.ChunkService;
 import org.davision1dyx.catmanguard.api.storage.service.FileService;
 import org.davision1dyx.catmanguard.api.storage.vo.ChunkQueryVO;
+import org.davision1dyx.catmanguard.api.storage.vo.FileListVO;
 import org.davision1dyx.catmanguard.api.storage.vo.FileUploadVO;
-import org.davision1dyx.catmanguard.api.storage.vo.QuerySplitVO;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -39,14 +37,45 @@ public class FileController {
      * @param description
      * @return
      */
-    @GetMapping("/upload")
+    @PostMapping("/upload")
     public FileUploadVO upload(@RequestParam MultipartFile file,
                                @RequestParam String title,
-                               @RequestParam String description) {
+                               @RequestParam(required = false) String softwareVersion,
+                               @RequestParam(required = false) String feature,
+                               @RequestParam(required = false) String microservice,
+                               @RequestParam(required = false) String description) {
         log.info("[GET] /processing/catman/storage/file/upload, file: {}, title: {}, description: {}",
                 file.getOriginalFilename(), title, description);
         FileUploadDTO fileUploadDTO = FileUploadDTO.build(file, title, description);
         return fileService.upload(fileUploadDTO);
+    }
+
+    /**
+     * 获取文件列表
+     * @param knowledgeId 知识库ID（当前未使用，预留）
+     * @param search 搜索关键词
+     * @param fileType 文件类型筛选
+     * @param status 状态筛选
+     * @return
+     */
+    @GetMapping("/list/{knowledgeId}")
+    public FileListVO list(@PathVariable String knowledgeId,
+                           @RequestParam(required = false) String search,
+                           @RequestParam(required = false) String fileType,
+                           @RequestParam(required = false) String status) {
+        log.info("[GET] /processing/catman/storage/file/list/{}", knowledgeId);
+        FileListDTO fileListDTO = FileListDTO.build(knowledgeId, search, fileType, status);
+        return fileService.list(fileListDTO);
+    }
+
+    /**
+     * 删除文件
+     * @param fileId 文件ID
+     */
+    @DeleteMapping("/{fileId}")
+    public void delete(@PathVariable String fileId) {
+        log.info("[DELETE] /processing/catman/storage/file/{}", fileId);
+        fileService.delete(fileId);
     }
 
     @GetMapping("/queryChunk")

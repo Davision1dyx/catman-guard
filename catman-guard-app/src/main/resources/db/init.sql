@@ -115,3 +115,142 @@ COMMENT ON COLUMN file_chunk.create_time IS '创建时间';
 COMMENT ON COLUMN file_chunk.update_time IS '更新时间';
 COMMENT ON COLUMN file_info.lock_version IS '锁版本';
 COMMENT ON COLUMN file_info.deleted IS '是否删除';
+
+-- 工单表
+CREATE TABLE issue (
+    id BIGSERIAL PRIMARY KEY,
+    issue_id VARCHAR(255) NOT NULL,
+    title VARCHAR(500) NOT NULL,
+    description TEXT,
+    type VARCHAR(50) DEFAULT 'INCIDENT',
+    priority VARCHAR(20) DEFAULT 'MEDIUM',
+    status VARCHAR(50) DEFAULT 'ASSIGNED',
+    submitter_id VARCHAR(255),
+    submitter_name VARCHAR(255),
+    submitter_email VARCHAR(255),
+    assignee_id VARCHAR(255),
+    assignee_name VARCHAR(255),
+    assignee_email VARCHAR(255),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    lock_version INT DEFAULT 0,
+    deleted INT DEFAULT 0
+);
+
+-- 索引
+CREATE UNIQUE INDEX uk_issue_id ON issue(issue_id);
+CREATE INDEX idx_issue_status ON issue(status);
+CREATE INDEX idx_issue_priority ON issue(priority);
+
+-- 字段注释
+COMMENT ON TABLE issue IS '工单表,存储工单信息';
+COMMENT ON COLUMN issue.id IS '主键ID';
+COMMENT ON COLUMN issue.issue_id IS '工单编号';
+COMMENT ON COLUMN issue.title IS '工单标题';
+COMMENT ON COLUMN issue.description IS '工单描述';
+COMMENT ON COLUMN issue.type IS '工单类型：INCIDENT/REQUEST/PROBLEM/CHANGE';
+COMMENT ON COLUMN issue.priority IS '优先级：HIGH/MEDIUM/LOW/CRITICAL';
+COMMENT ON COLUMN issue.status IS '状态：ASSIGNED/IN_PROGRESS/COMPLETED/VECTOR_STORED';
+COMMENT ON COLUMN issue.submitter_id IS '提交人ID';
+COMMENT ON COLUMN issue.submitter_name IS '提交人姓名';
+COMMENT ON COLUMN issue.submitter_email IS '提交人邮箱';
+COMMENT ON COLUMN issue.assignee_id IS '负责人ID';
+COMMENT ON COLUMN issue.assignee_name IS '负责人姓名';
+COMMENT ON COLUMN issue.assignee_email IS '负责人邮箱';
+COMMENT ON COLUMN issue.create_time IS '创建时间';
+COMMENT ON COLUMN issue.update_time IS '更新时间';
+COMMENT ON COLUMN issue.lock_version IS '锁版本';
+COMMENT ON COLUMN issue.deleted IS '是否删除';
+
+-- 值班人员表
+CREATE TABLE staff (
+    id BIGSERIAL PRIMARY KEY,
+    staff_id VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    group_id VARCHAR(255),
+    group_name VARCHAR(255),
+    status VARCHAR(20) DEFAULT 'ACTIVE',
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    lock_version INT DEFAULT 0,
+    deleted INT DEFAULT 0
+);
+
+-- 索引
+CREATE UNIQUE INDEX uk_staff_id ON staff(staff_id);
+CREATE INDEX idx_staff_group ON staff(group_id);
+CREATE INDEX idx_staff_status ON staff(status);
+
+-- 字段注释
+COMMENT ON TABLE staff IS '值班人员表,存储值班人员信息';
+COMMENT ON COLUMN staff.id IS '主键ID';
+COMMENT ON COLUMN staff.staff_id IS '人员ID';
+COMMENT ON COLUMN staff.name IS '姓名';
+COMMENT ON COLUMN staff.email IS '邮箱';
+COMMENT ON COLUMN staff.phone IS '电话';
+COMMENT ON COLUMN staff.group_id IS '分组ID';
+COMMENT ON COLUMN staff.group_name IS '分组名称';
+COMMENT ON COLUMN staff.status IS '状态：ACTIVE/ON_LEAVE';
+COMMENT ON COLUMN staff.create_time IS '创建时间';
+COMMENT ON COLUMN staff.update_time IS '更新时间';
+COMMENT ON COLUMN staff.lock_version IS '锁版本';
+COMMENT ON COLUMN staff.deleted IS '是否删除';
+
+-- 分组表
+CREATE TABLE staff_group (
+    id BIGSERIAL PRIMARY KEY,
+    group_id VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    lock_version INT DEFAULT 0,
+    deleted INT DEFAULT 0
+);
+
+-- 索引
+CREATE UNIQUE INDEX uk_group_id ON staff_group(group_id);
+
+-- 字段注释
+COMMENT ON TABLE staff_group IS '分组表,存储分组信息';
+COMMENT ON COLUMN staff_group.id IS '主键ID';
+COMMENT ON COLUMN staff_group.group_id IS '分组ID';
+COMMENT ON COLUMN staff_group.name IS '分组名称';
+COMMENT ON COLUMN staff_group.create_time IS '创建时间';
+COMMENT ON COLUMN staff_group.update_time IS '更新时间';
+COMMENT ON COLUMN staff_group.lock_version IS '锁版本';
+COMMENT ON COLUMN staff_group.deleted IS '是否删除';
+
+-- 排班表
+CREATE TABLE schedule (
+    id BIGSERIAL PRIMARY KEY,
+    schedule_id VARCHAR(255) NOT NULL,
+    group_id VARCHAR(255),
+    group_name VARCHAR(255),
+    start_date VARCHAR(20),
+    end_date VARCHAR(20),
+    is_active BOOLEAN DEFAULT TRUE,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    lock_version INT DEFAULT 0,
+    deleted INT DEFAULT 0
+);
+
+-- 索引
+CREATE UNIQUE INDEX uk_schedule_id ON schedule(schedule_id);
+CREATE INDEX idx_schedule_group ON schedule(group_id);
+
+-- 字段注释
+COMMENT ON TABLE schedule IS '排班表,存储排班信息';
+COMMENT ON COLUMN schedule.id IS '主键ID';
+COMMENT ON COLUMN schedule.schedule_id IS '排班ID';
+COMMENT ON COLUMN schedule.group_id IS '分组ID';
+COMMENT ON COLUMN schedule.group_name IS '分组名称';
+COMMENT ON COLUMN schedule.start_date IS '开始日期';
+COMMENT ON COLUMN schedule.end_date IS '结束日期';
+COMMENT ON COLUMN schedule.is_active IS '是否启用';
+COMMENT ON COLUMN schedule.create_time IS '创建时间';
+COMMENT ON COLUMN schedule.update_time IS '更新时间';
+COMMENT ON COLUMN schedule.lock_version IS '锁版本';
+COMMENT ON COLUMN schedule.deleted IS '是否删除';

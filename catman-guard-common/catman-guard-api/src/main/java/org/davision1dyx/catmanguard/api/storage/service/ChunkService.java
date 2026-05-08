@@ -1,9 +1,13 @@
 package org.davision1dyx.catmanguard.api.storage.service;
 
 import org.davision1dyx.catmanguard.api.storage.dto.ChunkEmbedDTO;
+import org.davision1dyx.catmanguard.api.storage.dto.ChunkListDTO;
 import org.davision1dyx.catmanguard.api.storage.dto.ChunkQueryDTO;
+import org.davision1dyx.catmanguard.api.storage.dto.EmbedSyncDTO;
 import org.davision1dyx.catmanguard.api.storage.vo.ChunkEmbedVO;
+import org.davision1dyx.catmanguard.api.storage.vo.ChunkListVO;
 import org.davision1dyx.catmanguard.api.storage.vo.ChunkQueryVO;
+import org.davision1dyx.catmanguard.api.storage.vo.EmbedSyncVO;
 
 /**
  * @author Davison
@@ -19,6 +23,8 @@ public interface ChunkService {
      */
     ChunkQueryVO query(ChunkQueryDTO chunkQueryDTO);
 
+    ChunkListVO list(ChunkListDTO chunkListDTO);
+
     /**
      * 文件分片嵌入
      *
@@ -26,4 +32,12 @@ public interface ChunkService {
      * @return 文件分片嵌入信息
      */
     ChunkEmbedVO embed(ChunkEmbedDTO chunkEmbedDTO);
+
+    /**
+     * 同步向量库
+     *
+     * @param embedSyncDTO 同步参数
+     * @return 同步结果
+     */
+    EmbedSyncVO sync(EmbedSyncDTO embedSyncDTO);
 }

@@ -6,10 +6,13 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.davision1dyx.catmanguard.api.conversation.service.MultiModalService;
+import org.davision1dyx.catmanguard.api.storage.dto.FileListDTO;
 import org.davision1dyx.catmanguard.api.storage.dto.FileRecognizeDTO;
 import org.davision1dyx.catmanguard.api.storage.dto.FileSplitDTO;
 import org.davision1dyx.catmanguard.api.storage.dto.FileUploadDTO;
 import org.davision1dyx.catmanguard.api.storage.service.FileService;
+import org.davision1dyx.catmanguard.api.storage.vo.ChunkVO;
+import org.davision1dyx.catmanguard.api.storage.vo.FileListVO;
 import org.davision1dyx.catmanguard.api.storage.vo.FileRecognizeVO;
 import org.davision1dyx.catmanguard.api.storage.vo.FileSplitVO;
 import org.davision1dyx.catmanguard.api.storage.vo.FileUploadVO;
@@ -71,6 +74,7 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
     @Override
     public FileUploadVO upload(FileUploadDTO fileUploadDTO) {
         log.info("开始上传文件: {}", fileUploadDTO.getFile().getOriginalFilename());
+        long size = fileUploadDTO.getFile().getSize();
         // 1. 源文件存储到存储介质
         FileMode mode = fileProperties.getMode();
         StorageHandleInfo storageHandleInfo = storageHandler.handleUpload(fileUploadDTO.getFile(), mode);
@@ -79,7 +83,56 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
         FileInfo fileInfo = FileInfoConvertor.INSTANCE.mapToModel(fileUploadDTO, storageHandleInfo.getFileName(),
                 storageHandleInfo.getUrl(), mode);
         save(fileInfo);
-        return FileUploadVO.build(fileInfo.getFileId(), fileInfo.getUrl(), fileInfo.getStatus());
+        return FileUploadVO.build(fileInfo.getFileId(), fileInfo.getUrl(), fileInfo.getStatus(), size);
+    }
+
+    @Override
+    public FileListVO list(FileListDTO fileListDTO) {
+        log.info("开始查询文件列表, knowledgeId: {}, search: {}, fileType: {}, status: {}",
+                fileListDTO.getKnowledgeId(), fileListDTO.getSearch(),
+                fileListDTO.getFileType(), fileListDTO.getStatus());
+
+        LambdaQueryWrapper<FileInfo> queryWrapper = new LambdaQueryWrapper<>();
+        if (fileListDTO.getSearch() != null && !fileListDTO.getSearch().isEmpty()) {
+            queryWrapper.like(FileInfo::getFileTitle, fileListDTO.getSearch())
+                    .or().like(FileInfo::getFileName, fileListDTO.getSearch());
+        }
+        if (fileListDTO.getFileType() != null && !fileListDTO.getFileType().isEmpty()) {
+            queryWrapper.eq(FileInfo::getFileType, fileListDTO.getFileType());
+        }
+        if (fileListDTO.getStatus() != null && !fileListDTO.getStatus().isEmpty()) {
+            queryWrapper.eq(FileInfo::getStatus, fileListDTO.getStatus());
+        }
+
+        List<FileInfo> fileInfoList = list(queryWrapper);
+
+        List<FileListVO.FileItemVO> data = fileInfoList.stream().map(f -> {
+            return FileListVO.FileItemVO.build(
+                    f.getFileId(),
+                    f.getFileTitle(),
+                    f.getFileName(),
+                    "",
+                    f.getExtension(),
+                    f.getDescription(),
+                    "",
+                    f.getStatus(),
+                    0L,
+                    f.getCreateTime(),
+                    f.getUpdateTime()
+            );
+        }).collect(java.util.stream.Collectors.toList());
+
+        return FileListVO.build(data);
+    }
+
+    @Override
+    public void delete(String fileId) {
+        log.info("开始删除文件, fileId: {}", fileId);
+
+        LambdaQueryWrapper<FileInfo> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(FileInfo::getFileId, fileId);
+        remove(queryWrapper);
+        // TODO 对storage进行删除
     }
 
     @Override
@@ -191,6 +244,25 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
         updateById(fileInfo);
 
         return FileSplitVO.build(fileChunks.size());
+    }
+
+    @Override
+    public ChunkVO chunk(FileSplitDTO fileSplitDTO) {
+        log.info("开始执行分片, fileId: {}, chunkType: {}, chunkSize: {}, chunkOverlap: {}",
+                fileSplitDTO.getFileId(), fileSplitDTO.getChunkType(),
+                fileSplitDTO.getChunkSize(), fileSplitDTO.getChunkOverlap());
+
+        // TODO 分片操作其实还有一个识别的操作在内。
+        split(fileSplitDTO);
+
+        List<FileChunk> chunks = fileChunkService.list(new LambdaQueryWrapper<FileChunk>()
+                .eq(FileChunk::getFileId, fileSplitDTO.getFileId()));
+
+        List<ChunkVO.ChunkItemVO> chunkItems = chunks.stream().map(c ->
+                ChunkVO.ChunkItemVO.build(c.getChunkId(), c.getContent(), (long) c.getContent().length())
+        ).toList();
+
+        return ChunkVO.build(fileSplitDTO.getFileId(), "CHUNKED", chunkItems);
     }
 
     @Override

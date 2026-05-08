@@ -1,0 +1,647 @@
+{
+  "info": {
+    "_postman_id": "catman-guard-api-collection",
+    "name": "Catman Guard API",
+    "description": "Catman Guard 智能问答与工单管理系统接口协议",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "智能问答模块",
+      "item": [
+        {
+          "name": "普通聊天接口",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/conversation/chat/chat?message={{message}}&conversationId={{conversationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "conversation", "chat", "chat"],
+              "query": [
+                {"key": "message", "value": "{{message}}", "description": "用户输入的消息内容"},
+                {"key": "conversationId", "value": "{{conversationId}}", "description": "对话ID，用于标识会话"}
+              ]
+            },
+            "description": "普通聊天接口，返回流式文本响应"
+          },
+          "response": []
+        },
+        {
+          "name": "网页搜索聊天接口",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/conversation/chat/websearch?message={{message}}&conversationId={{conversationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "conversation", "chat", "websearch"],
+              "query": [
+                {"key": "message", "value": "{{message}}", "description": "用户输入的消息内容"},
+                {"key": "conversationId", "value": "{{conversationId}}", "description": "对话ID，用于标识会话"}
+              ]
+            },
+            "description": "网页搜索聊天接口，结合网络搜索返回答案"
+          },
+          "response": []
+        },
+        {
+          "name": "检索聊天接口",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/conversation/chat/retrieavl?message={{message}}&conversationId={{conversationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "conversation", "chat", "retrieavl"],
+              "query": [
+                {"key": "message", "value": "{{message}}", "description": "用户输入的消息内容"},
+                {"key": "conversationId", "value": "{{conversationId}}", "description": "对话ID，用于标识会话"}
+              ]
+            },
+            "description": "检索聊天接口，从知识库检索相关内容回答"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "知识库管理模块",
+      "item": [
+        {
+          "name": "获取知识库列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/storage/knowledge/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "storage", "knowledge", "list"]
+            },
+            "description": "获取所有知识库的列表信息"
+          },
+          "response": []
+        },
+        {
+          "name": "创建知识库",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/storage/knowledge/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "storage", "knowledge", "create"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"知识库名称\", \"description\": \"知识库描述\", \"type\": \"technical\"}"
+            },
+            "description": "创建一个新的知识库"
+          },
+          "response": []
+        },
+        {
+          "name": "更新知识库",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/storage/knowledge/{{knowledgeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "storage", "knowledge", "{{knowledgeId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"更新后的名称\", \"description\": \"更新后的描述\", \"type\": \"product\"}"
+            },
+            "description": "更新指定知识库的信息"
+          },
+          "response": []
+        },
+        {
+          "name": "删除知识库",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/storage/knowledge/{{knowledgeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "storage", "knowledge", "{{knowledgeId}}"]
+            },
+            "description": "删除指定的知识库"
+          },
+          "response": []
+        },
+        {
+          "name": "上传文件",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/storage/file/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "storage", "file", "upload"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {"key": "file", "type": "file", "description": "要上传的文件"},
+                {"key": "title", "value": "文件标题", "type": "text", "description": "文件标题"},
+                {"key": "softwareVersion", "value": "", "type": "text", "description": "软件版本"},
+                {"key": "feature", "value": "", "type": "text", "description": "特性标签"},
+                {"key": "microservice", "value": "", "type": "text", "description": "所属微服务"},
+                {"key": "description", "value": "", "type": "text", "description": "文件描述"}
+              ]
+            },
+            "description": "上传文件到指定知识库"
+          },
+          "response": []
+        },
+        {
+          "name": "获取文件列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/storage/file/list/{{knowledgeId}}?search={{search}}&fileType={{fileType}}&status={{status}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "storage", "file", "list", "{{knowledgeId}}"],
+              "query": [
+                {"key": "search", "value": "{{search}}", "description": "搜索关键词"},
+                {"key": "fileType", "value": "{{fileType}}", "description": "文件类型筛选"},
+                {"key": "status", "value": "{{status}}", "description": "状态筛选"}
+              ]
+            },
+            "description": "获取指定知识库下的文件列表"
+          },
+          "response": []
+        },
+        {
+          "name": "删除文件",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/storage/file/{{fileId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "storage", "file", "{{fileId}}"]
+            },
+            "description": "删除指定的文件"
+          },
+          "response": []
+        },
+        {
+          "name": "执行文件分片",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/storage/chunk/chunk/{{fileId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "storage", "chunk", "chunk", "{{fileId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"chunkType\": \"fixed_length\", \"chunkSize\": 1000, \"chunkOverlap\": 100}"
+            },
+            "description": "对上传的文件执行分片处理"
+          },
+          "response": []
+        },
+        {
+          "name": "获取分片信息",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/storage/chunk/list/{{fileId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "storage", "chunk", "list", "{{fileId}}"]
+            },
+            "description": "获取指定文件的分片信息"
+          },
+          "response": []
+        },
+        {
+          "name": "同步向量库",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/storage/embed/sync/{{knowledgeId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "storage", "embed", "sync", "{{knowledgeId}}"]
+            },
+            "description": "同步知识库的向量库"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "工单中心模块",
+      "item": [
+        {
+          "name": "获取工单列表",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/issue/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "issue", "list"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"search\": \"\", \"status\": \"\", \"priority\": \"\", \"assignee\": \"\", \"type\": \"\", \"page\": 1, \"size\": 10}"
+            },
+            "description": "获取工单列表，支持分页和筛选"
+          },
+          "response": []
+        },
+        {
+          "name": "创建工单",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/issue/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "issue", "create"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"工单标题\", \"description\": \"工单描述\", \"type\": \"INCIDENT\", \"priority\": \"MEDIUM\"}"
+            },
+            "description": "创建一个新的工单"
+          },
+          "response": []
+        },
+        {
+          "name": "获取工单详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/issue/{{issueId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "issue", "{{issueId}}"]
+            },
+            "description": "获取工单的详细信息"
+          },
+          "response": []
+        },
+        {
+          "name": "更新工单",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/issue/{{issueId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "issue", "{{issueId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"更新后的标题\", \"description\": \"更新后的描述\", \"type\": \"REQUEST\", \"priority\": \"HIGH\"}"
+            },
+            "description": "更新工单的基本信息"
+          },
+          "response": []
+        },
+        {
+          "name": "删除工单",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/issue/{{issueId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "issue", "{{issueId}}"]
+            },
+            "description": "删除指定的工单"
+          },
+          "response": []
+        },
+        {
+          "name": "分配工单",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/issue/assign/{{issueId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "issue", "assign", "{{issueId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"assigneeId\": \"user-2\"}"
+            },
+            "description": "将工单分配给指定负责人"
+          },
+          "response": []
+        },
+        {
+          "name": "更新工单状态",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/issue/status/{{issueId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "issue", "status", "{{issueId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\": \"COMPLETED\", \"comment\": \"处理完成\"}"
+            },
+            "description": "更新工单的处理状态"
+          },
+          "response": []
+        },
+        {
+          "name": "添加回复",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/issue/reply/{{issueId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "issue", "reply", "{{issueId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"content\": \"回复内容\", \"type\": \"COMMENT\"}"
+            },
+            "description": "为工单添加一条回复"
+          },
+          "response": []
+        },
+        {
+          "name": "存储向量",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/issue/store/{{issueId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "issue", "store", "{{issueId}}"]
+            },
+            "description": "将工单内容存储到向量库"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "值班排班模块",
+      "item": [
+        {
+          "name": "获取值班人员列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/staff/list?search={{search}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "staff", "list"],
+              "query": [{"key": "search", "value": "{{search}}", "description": "搜索关键词"}]
+            },
+            "description": "获取所有值班人员的信息"
+          },
+          "response": []
+        },
+        {
+          "name": "创建值班人员",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/staff/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "staff", "create"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\": \"staff-1\", \"name\": \"姓名\", \"email\": \"邮箱\", \"phone\": \"电话\", \"groupId\": \"group-1\"}"
+            },
+            "description": "创建一个新的值班人员"
+          },
+          "response": []
+        },
+        {
+          "name": "更新值班人员",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/staff/modify/{{staffId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "staff", "modify", "{{staffId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"更新后的姓名\", \"email\": \"更新后的邮箱\", \"phone\": \"更新后的电话\", \"groupId\": \"group-2\", \"status\": \"ACTIVE\"}"
+            },
+            "description": "更新值班人员的信息"
+          },
+          "response": []
+        },
+        {
+          "name": "删除值班人员",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/staff/delete/{{staffId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "staff", "delete", "{{staffId}}"]
+            },
+            "description": "删除指定的值班人员"
+          },
+          "response": []
+        },
+        {
+          "name": "获取分组列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/group/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "group", "list"]
+            },
+            "description": "获取所有分组的信息"
+          },
+          "response": []
+        },
+        {
+          "name": "创建分组",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/group/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "group", "create"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"新分组名称\"}"
+            },
+            "description": "创建一个新的分组"
+          },
+          "response": []
+        },
+        {
+          "name": "更新分组",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/group/modify/{{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "group", "modify", "{{groupId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"更新后的名称\"}"
+            },
+            "description": "更新分组的名称"
+          },
+          "response": []
+        },
+        {
+          "name": "删除分组",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/group/delete/{{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "group", "delete", "{{groupId}}"]
+            },
+            "description": "删除指定的分组"
+          },
+          "response": []
+        },
+        {
+          "name": "获取排班列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/schedule/list?startDate={{startDate}}&endDate={{endDate}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "schedule", "list"],
+              "query": [
+                {"key": "startDate", "value": "{{startDate}}", "description": "开始日期(yyyy-MM-dd)"},
+                {"key": "endDate", "value": "{{endDate}}", "description": "结束日期(yyyy-MM-dd)"}
+              ]
+            },
+            "description": "获取排班列表信息"
+          },
+          "response": []
+        },
+        {
+          "name": "生成排班",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/schedule/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "schedule", "create"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"startDate\": \"2024-01-15\", \"endDate\": \"2024-01-22\", \"rotationDays\": 7}"
+            },
+            "description": "生成新的排班计划"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "数据看板模块",
+      "item": [
+        {
+          "name": "获取统计数据",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/dashboard/state?startDate={{startDate}}&endDate={{endDate}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "dashboard", "state"],
+              "query": [
+                {"key": "startDate", "value": "{{startDate}}", "description": "开始日期"},
+                {"key": "endDate", "value": "{{endDate}}", "description": "结束日期"}
+              ]
+            },
+            "description": "获取数据看板的统计数据"
+          },
+          "response": []
+        },
+        {
+          "name": "获取趋势数据",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/dashboard/trend?period={{period}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "dashboard", "trend"],
+              "query": [{"key": "period", "value": "{{period}}", "description": "周期: week/month/year"}]
+            },
+            "description": "获取趋势数据"
+          },
+          "response": []
+        },
+        {
+          "name": "获取热门问题",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/processing/catman/admin/dashboard/hot-questions?limit={{limit}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["processing", "catman", "admin", "dashboard", "hot-questions"],
+              "query": [{"key": "limit", "value": "{{limit}}", "description": "返回数量，默认10"}]
+            },
+            "description": "获取热门问题排行榜"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {"type": "text/javascript", "exec": ["// Pre-request script"]}
+    },
+    {
+      "listen": "test",
+      "script": {"type": "text/javascript", "exec": ["// Test script"]}
+    }
+  ],
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8080", "description": "API base URL"},
+    {"key": "message", "value": "测试消息", "description": "用户消息"},
+    {"key": "conversationId", "value": "conv-001", "description": "对话ID"},
+    {"key": "knowledgeId", "value": "kb-1", "description": "知识库ID"},
+    {"key": "fileId", "value": "file-1", "description": "文件ID"},
+    {"key": "issueId", "value": "TKT-001", "description": "工单ID"},
+    {"key": "staffId", "value": "staff-1", "description": "人员ID"},
+    {"key": "groupId", "value": "group-1", "description": "分组ID"},
+    {"key": "search", "value": "", "description": "搜索关键词"},
+    {"key": "fileType", "value": "", "description": "文件类型"},
+    {"key": "status", "value": "", "description": "状态"},
+    {"key": "startDate", "value": "2024-01-01", "description": "开始日期"},
+    {"key": "endDate", "value": "2024-12-31", "description": "结束日期"},
+    {"key": "period", "value": "week", "description": "周期"},
+    {"key": "limit", "value": "10", "description": "返回数量"}
+  ]
+}

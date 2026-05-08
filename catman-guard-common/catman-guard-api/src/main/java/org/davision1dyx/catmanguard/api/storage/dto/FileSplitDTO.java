@@ -10,4 +10,7 @@ import lombok.Data;
 @Data
 public class FileSplitDTO {
     private String fileId;
+    private String chunkType;
+    private Integer chunkSize;
+    private Integer chunkOverlap;
 }
