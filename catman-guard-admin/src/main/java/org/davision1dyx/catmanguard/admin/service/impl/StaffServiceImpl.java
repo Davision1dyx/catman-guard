@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
+import org.davision1dyx.catmanguard.admin.convertor.StaffConvertor;
 import org.davision1dyx.catmanguard.admin.mapper.StaffMapper;
 import org.davision1dyx.catmanguard.admin.model.Staff;
 import org.davision1dyx.catmanguard.admin.service.StaffService;
@@ -45,7 +46,7 @@ public class StaffServiceImpl extends ServiceImpl<StaffMapper, Staff> implements
         page = page(page, queryWrapper);
         
         List<StaffVO> staffVOList = page.getRecords().stream()
-                .map(this::convertToVO)
+                .map(StaffConvertor.INSTANCE::mapToVO)
                 .collect(Collectors.toList());
         
         StaffListVO result = new StaffListVO();
@@ -53,22 +54,6 @@ public class StaffServiceImpl extends ServiceImpl<StaffMapper, Staff> implements
         result.setTotal(page.getTotal());
         
         return result;
-    }
-
-    /**
-     * 将Staff实体转换为StaffVO
-     */
-    private StaffVO convertToVO(Staff staff) {
-        StaffVO vo = new StaffVO();
-        vo.setId(staff.getStaffId());
-        vo.setName(staff.getName());
-        vo.setEmail(staff.getEmail());
-        vo.setPhone(staff.getPhone());
-        vo.setGroupId(staff.getGroupId());
-        vo.setGroupName(staff.getGroupName());
-        vo.setStatus(staff.getStatus());
-        vo.setJoinedTime(staff.getCreateTime());
-        return vo;
     }
 
     @Override

@@ -23,6 +23,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.davision1dyx</groupId>
+            <artifactId>catman-guard-base</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
 </project>

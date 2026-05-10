@@ -10,16 +10,44 @@ public class BizException extends RuntimeException {
     private static final long serialVersionUID = 1L;
     private String code;
     private String message;
+    private int httpCode;
 
     public BizException(ErrorCode errorCode, String message) {
         super(message);
         this.code = errorCode.code;
         this.message = message;
+        this.httpCode = errorCode.httpCode;
     }
 
     public BizException(ErrorCode errorCode) {
         super(errorCode.message);
         this.code = errorCode.code;
         this.message = errorCode.message;
+        this.httpCode = errorCode.httpCode;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    @Override
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public int getHttpCode() {
+        return httpCode;
+    }
+
+    public void setHttpCode(int httpCode) {
+        this.httpCode = httpCode;
     }
 }

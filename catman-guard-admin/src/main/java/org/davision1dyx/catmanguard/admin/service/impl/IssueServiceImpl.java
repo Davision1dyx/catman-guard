@@ -3,6 +3,7 @@ package org.davision1dyx.catmanguard.admin.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
+import org.davision1dyx.catmanguard.admin.convertor.IssueConvertor;
 import org.davision1dyx.catmanguard.admin.mapper.IssueMapper;
 import org.davision1dyx.catmanguard.admin.model.Issue;
 import org.davision1dyx.catmanguard.admin.service.IssueService;
@@ -62,7 +63,7 @@ public class IssueServiceImpl extends ServiceImpl<IssueMapper, Issue> implements
         List<Issue> pageList = fromIndex < total ? issueList.subList(fromIndex, toIndex) : new ArrayList<>();
         
         List<IssueVO> voList = pageList.stream()
-                .map(this::convertToVO)
+                .map(IssueConvertor.INSTANCE::mapToVO)
                 .collect(Collectors.toList());
         
         IssueListVO result = new IssueListVO();
@@ -74,53 +75,16 @@ public class IssueServiceImpl extends ServiceImpl<IssueMapper, Issue> implements
     @Override
     public IssueDetailVO getIssueDetail(String issueId) {
         log.info("Getting issue detail: {}", issueId);
-        
+
         LambdaQueryWrapper<Issue> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Issue::getIssueId, issueId);
         Issue issue = getOne(queryWrapper);
-        
+
         if (issue == null) {
             return null;
         }
-        
-        IssueDetailVO detailVO = new IssueDetailVO();
-        detailVO.setId(issue.getIssueId());
-        detailVO.setTitle(issue.getTitle());
-        detailVO.setDescription(issue.getDescription());
-        detailVO.setType(issue.getType());
-        detailVO.setPriority(issue.getPriority());
-        detailVO.setStatus(issue.getStatus());
-        detailVO.setSubmitterId(issue.getSubmitterId());
-        detailVO.setSubmitterName(issue.getSubmitterName());
-        detailVO.setSubmitterEmail(issue.getSubmitterEmail());
-        detailVO.setAssigneeId(issue.getAssigneeId());
-        detailVO.setAssigneeName(issue.getAssigneeName());
-        detailVO.setAssigneeEmail(issue.getAssigneeEmail());
-        detailVO.setCreatedTime(issue.getCreateTime());
-        detailVO.setUpdatedTime(issue.getUpdateTime());
-        detailVO.setAttachments(new ArrayList<>());
-        detailVO.setReplies(new ArrayList<>());
-        
-        return detailVO;
-    }
 
-    private IssueVO convertToVO(Issue issue) {
-        IssueVO vo = new IssueVO();
-        vo.setId(issue.getIssueId());
-        vo.setTitle(issue.getTitle());
-        vo.setDescription(issue.getDescription());
-        vo.setType(issue.getType());
-        vo.setPriority(issue.getPriority());
-        vo.setStatus(issue.getStatus());
-        vo.setSubmitterId(issue.getSubmitterId());
-        vo.setSubmitterName(issue.getSubmitterName());
-        vo.setSubmitterEmail(issue.getSubmitterEmail());
-        vo.setAssigneeId(issue.getAssigneeId());
-        vo.setAssigneeName(issue.getAssigneeName());
-        vo.setAssigneeEmail(issue.getAssigneeEmail());
-        vo.setCreatedTime(issue.getCreateTime());
-        vo.setUpdatedTime(issue.getUpdateTime());
-        return vo;
+        return IssueConvertor.INSTANCE.mapToDetailVO(issue);
     }
 
     @Override

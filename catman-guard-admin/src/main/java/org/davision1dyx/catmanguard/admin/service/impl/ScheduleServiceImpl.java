@@ -3,6 +3,7 @@ package org.davision1dyx.catmanguard.admin.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
+import org.davision1dyx.catmanguard.admin.convertor.ScheduleConvertor;
 import org.davision1dyx.catmanguard.admin.mapper.ScheduleMapper;
 import org.davision1dyx.catmanguard.admin.model.Schedule;
 import org.davision1dyx.catmanguard.admin.service.ScheduleService;
@@ -41,23 +42,12 @@ public class ScheduleServiceImpl extends ServiceImpl<ScheduleMapper, Schedule> i
         List<Schedule> scheduleList = list(queryWrapper);
         
         List<ScheduleVO> voList = scheduleList.stream()
-                .map(this::convertToVO)
+                .map(ScheduleConvertor.INSTANCE::mapToVO)
                 .collect(Collectors.toList());
         
         ScheduleListVO result = new ScheduleListVO();
         result.setList(voList);
         return result;
-    }
-
-    private ScheduleVO convertToVO(Schedule schedule) {
-        ScheduleVO vo = new ScheduleVO();
-        vo.setId(schedule.getScheduleId());
-        vo.setGroupId(schedule.getGroupId());
-        vo.setGroupName(schedule.getGroupName());
-        vo.setStartDate(schedule.getStartDate());
-        vo.setEndDate(schedule.getEndDate());
-        vo.setIsActive(schedule.getIsActive());
-        return vo;
     }
 
     @Override

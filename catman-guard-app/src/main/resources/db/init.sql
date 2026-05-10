@@ -253,3 +253,39 @@ COMMENT ON COLUMN schedule.create_time IS '创建时间';
 COMMENT ON COLUMN schedule.update_time IS '更新时间';
 COMMENT ON COLUMN schedule.lock_version IS '锁版本';
 COMMENT ON COLUMN schedule.deleted IS '是否删除';
+
+-- 知识库表
+CREATE TABLE knowledge (
+    id BIGSERIAL PRIMARY KEY,
+    knowledge_id VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    type VARCHAR(50) DEFAULT 'technical',
+    file_count INTEGER DEFAULT 0,
+    chunk_count INTEGER DEFAULT 0,
+    status VARCHAR(50) DEFAULT 'ACTIVE',
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    lock_version INT DEFAULT 0,
+    deleted INT DEFAULT 0
+);
+
+-- 索引
+CREATE UNIQUE INDEX uk_knowledge_id ON knowledge(knowledge_id);
+CREATE INDEX idx_knowledge_type ON knowledge(type);
+CREATE INDEX idx_knowledge_status ON knowledge(status);
+
+-- 字段注释
+COMMENT ON TABLE knowledge IS '知识库表,存储知识库信息';
+COMMENT ON COLUMN knowledge.id IS '主键ID';
+COMMENT ON COLUMN knowledge.knowledge_id IS '知识库唯一标识(UUID)';
+COMMENT ON COLUMN knowledge.name IS '知识库名称';
+COMMENT ON COLUMN knowledge.description IS '知识库描述';
+COMMENT ON COLUMN knowledge.type IS '知识库类型：product-产品文档, technical-技术文档, operation-运维文档, training-培训资料';
+COMMENT ON COLUMN knowledge.file_count IS '文件数量';
+COMMENT ON COLUMN knowledge.chunk_count IS '分片数量';
+COMMENT ON COLUMN knowledge.status IS '状态：ACTIVE-活跃, MAINTENANCE-维护中';
+COMMENT ON COLUMN knowledge.create_time IS '创建时间';
+COMMENT ON COLUMN knowledge.update_time IS '更新时间';
+COMMENT ON COLUMN knowledge.lock_version IS '锁版本';
+COMMENT ON COLUMN knowledge.deleted IS '是否删除';

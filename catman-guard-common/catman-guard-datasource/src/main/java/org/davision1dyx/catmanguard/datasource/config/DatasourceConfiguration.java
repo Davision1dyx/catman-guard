@@ -1,6 +1,7 @@
 package org.davision1dyx.catmanguard.datasource.config;
 
 import com.baomidou.mybatisplus.annotation.DbType;
+import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
@@ -75,14 +76,14 @@ public class DatasourceConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(value = SqlSessionFactory.class)
-    public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
+    public SqlSessionFactory sqlSessionFactory(DataSource dataSource, MetaDataHandler metaDataHandler) throws Exception {
         MybatisSqlSessionFactoryBean factoryBean = new MybatisSqlSessionFactoryBean();
         factoryBean.setDataSource(dataSource);
-        // 如果你有 XML mapper（推荐加）
-//        factoryBean.setMapperLocations(
-//                new PathMatchingResourcePatternResolver()
-//                        .getResources("classpath*:mapper/**/*.xml")
-//        );
+
+        GlobalConfig globalConfig = new GlobalConfig();
+        globalConfig.setMetaObjectHandler(metaDataHandler);
+        factoryBean.setGlobalConfig(globalConfig);
+
         return factoryBean.getObject();
     }
 
