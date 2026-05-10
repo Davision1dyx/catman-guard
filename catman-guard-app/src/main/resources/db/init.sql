@@ -37,8 +37,8 @@ COMMENT ON COLUMN context_session.first_response_time IS '首次响应时间(毫
 COMMENT ON COLUMN context_session.total_response_time IS '整体回复时间(毫秒)';
 COMMENT ON COLUMN context_session.create_time IS '创建时间';
 COMMENT ON COLUMN context_session.update_time IS '更新时间';
-COMMENT ON COLUMN file_info.lock_version IS '锁版本';
-COMMENT ON COLUMN file_info.deleted IS '是否删除';
+COMMENT ON COLUMN context_session.lock_version IS '锁版本';
+COMMENT ON COLUMN context_session.deleted IS '是否删除';
 
 CREATE TABLE file_info (
    id BIGSERIAL PRIMARY KEY,
@@ -63,7 +63,6 @@ CREATE TABLE file_info (
 -- 索引
 CREATE UNIQUE INDEX uk_file_id ON file_info(file_id);
 CREATE INDEX idx_status ON file_info(status);
-CREATE INDEX idx_create_time ON file_info(create_time);
 
 -- 字段注释
 COMMENT ON TABLE file_info IS '文件元数据表,存储文件基本信息和解析状态';
@@ -113,8 +112,8 @@ COMMENT ON COLUMN file_chunk.content IS '分片内容';
 COMMENT ON COLUMN file_chunk.meta_data IS '元数据';
 COMMENT ON COLUMN file_chunk.create_time IS '创建时间';
 COMMENT ON COLUMN file_chunk.update_time IS '更新时间';
-COMMENT ON COLUMN file_info.lock_version IS '锁版本';
-COMMENT ON COLUMN file_info.deleted IS '是否删除';
+COMMENT ON COLUMN file_chunk.lock_version IS '锁版本';
+COMMENT ON COLUMN file_chunk.deleted IS '是否删除';
 
 -- 工单表
 CREATE TABLE issue (

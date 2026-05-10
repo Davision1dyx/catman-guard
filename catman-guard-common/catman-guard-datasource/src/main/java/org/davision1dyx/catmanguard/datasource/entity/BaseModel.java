@@ -30,7 +30,7 @@ public class BaseModel {
     */
    @TableLogic
    @TableField(fill = FieldFill.INSERT)
-   private Integer deleteFlag;
+   private Integer deleted;
    /**
     * 乐观锁版本号
     */
@@ -62,12 +62,12 @@ public class BaseModel {
       this.updateTime = updateTime;
    }
 
-   public Integer getDeleteFlag() {
-      return deleteFlag;
+   public Integer getDeleted() {
+      return deleted;
    }
 
-   public void setDeleteFlag(Integer deleteFlag) {
-      this.deleteFlag = deleteFlag;
+   public void setDeleted(Integer deleted) {
+      this.deleted = deleted;
    }
 
    public Integer getLockVersion() {
