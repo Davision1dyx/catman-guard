@@ -20,7 +20,7 @@ import org.springframework.context.annotation.Configuration;
 public class FileConfiguration {
 
     @Bean
-    @ConditionalOnExpression("'${catname.file.mode}' == 'minio'")
+    @ConditionalOnExpression("'${catman.file.mode}' == 'minio'")
     public MinioClient minioClient(FileProperties fileProperties) throws Exception {
         MinioClient minioClient = MinioClient.builder()
                 .endpoint(fileProperties.getMinio().getEndpoint())

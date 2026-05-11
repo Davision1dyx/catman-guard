@@ -6,7 +6,7 @@ catman:
   file:
     mode: minio
     minio:
-      endpoint: http://localhost:9001
+      endpoint: http://192.168.1.88:9000
       accessKey: minioadmin
       secretKey: minioadmin
       bucketName: catman
@@ -22,6 +22,10 @@ catman:
     minimum-idle: 10
     idle-timeout: 600000
 spring:
+  servlet:
+    multipart:
+      max-file-size: 512MB
+      max-request-size: 512MB
   ai:
     vectorstore:
       pgvector:

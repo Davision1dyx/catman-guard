@@ -10,16 +10,19 @@ import org.mapstruct.Mapping;
 import org.mapstruct.NullValueCheckStrategy;
 import org.mapstruct.factory.Mappers;
 
+import java.util.UUID;
+
 /**
  * @author Davison
  * @date 2026-05-02
  * @description
  */
-@Mapper(nullValueCheckStrategy = NullValueCheckStrategy.ALWAYS, imports = {FileStatus.class, FileMode.class, FileUtil.class})
+@Mapper(nullValueCheckStrategy = NullValueCheckStrategy.ALWAYS, imports = {FileStatus.class, FileMode.class, FileUtil.class, UUID.class})
 public interface FileInfoConvertor {
 
     FileInfoConvertor INSTANCE = Mappers.getMapper(FileInfoConvertor.class);
 
+    @Mapping(target = "fileId", expression = "java(UUID.randomUUID().toString())")
     @Mapping(source = "url", target = "url")
     @Mapping(source = "fileName", target = "fileName")
     @Mapping(target = "storageType", expression = "java(mode.name())")

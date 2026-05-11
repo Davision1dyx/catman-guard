@@ -44,7 +44,7 @@ public class FileController {
                                @RequestParam(required = false) String feature,
                                @RequestParam(required = false) String microservice,
                                @RequestParam(required = false) String description) {
-        log.info("[GET] /processing/catman/storage/file/upload, file: {}, title: {}, description: {}",
+        log.info("[POST] /processing/catman/storage/file/upload, file: {}, title: {}, description: {}",
                 file.getOriginalFilename(), title, description);
         FileUploadDTO fileUploadDTO = FileUploadDTO.build(file, title, description);
         return fileService.upload(fileUploadDTO);

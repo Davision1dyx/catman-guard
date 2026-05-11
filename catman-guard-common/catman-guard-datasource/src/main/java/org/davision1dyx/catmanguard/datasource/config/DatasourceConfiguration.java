@@ -76,9 +76,10 @@ public class DatasourceConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(value = SqlSessionFactory.class)
-    public SqlSessionFactory sqlSessionFactory(DataSource dataSource, MetaDataHandler metaDataHandler) throws Exception {
+    public SqlSessionFactory sqlSessionFactory(DataSource dataSource, MetaDataHandler metaDataHandler, MybatisPlusInterceptor mybatisPlusInterceptor) throws Exception {
         MybatisSqlSessionFactoryBean factoryBean = new MybatisSqlSessionFactoryBean();
         factoryBean.setDataSource(dataSource);
+        factoryBean.setPlugins(mybatisPlusInterceptor);
 
         GlobalConfig globalConfig = new GlobalConfig();
         globalConfig.setMetaObjectHandler(metaDataHandler);
@@ -105,8 +106,8 @@ public class DatasourceConfiguration {
         interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         //防全表更新与删除插件
         interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
-        //分页插件
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+        //分页插件 - 使用 PostgreSQL
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.POSTGRE_SQL));
         return interceptor;
     }
 }

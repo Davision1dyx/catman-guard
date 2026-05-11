@@ -7,9 +7,9 @@ server:
       enabled: true
 catman:
   file:
-    mode: local
+    mode: minio
     minio:
-      endpoint: http://localhost:9001
+      endpoint: http://192.168.1.88:9000
       accessKey: minioadmin
       secretKey: minioadmin
       bucketName: catman
@@ -34,6 +34,10 @@ catman:
 spring:
   main:
     web-application-type: servlet
+  servlet:
+    multipart:
+      max-file-size: 512MB
+      max-request-size: 512MB
   ai:
     openai:
       embedding:
