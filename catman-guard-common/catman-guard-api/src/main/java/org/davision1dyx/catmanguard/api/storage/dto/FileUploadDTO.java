@@ -14,12 +14,22 @@ public class FileUploadDTO {
     private MultipartFile file;
     private String fileTitle;
     private String description;
+    private String knowledgeId;
 
     public static FileUploadDTO build(MultipartFile file, String fileTitle, String description) {
         FileUploadDTO fileUploadDTO = new FileUploadDTO();
         fileUploadDTO.setFile(file);
         fileUploadDTO.setFileTitle(fileTitle);
         fileUploadDTO.setDescription(description);
+        return fileUploadDTO;
+    }
+
+    public static FileUploadDTO build(MultipartFile file, String fileTitle, String description, String knowledgeId) {
+        FileUploadDTO fileUploadDTO = new FileUploadDTO();
+        fileUploadDTO.setFile(file);
+        fileUploadDTO.setFileTitle(fileTitle);
+        fileUploadDTO.setDescription(description);
+        fileUploadDTO.setKnowledgeId(knowledgeId);
         return fileUploadDTO;
     }
 }

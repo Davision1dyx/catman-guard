@@ -12,6 +12,8 @@ import org.davision1dyx.catmanguard.api.storage.vo.FileUploadVO;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 /**
  * @author Davison
  * @date 2026-05-01
@@ -40,13 +42,14 @@ public class FileController {
     @PostMapping("/upload")
     public FileUploadVO upload(@RequestParam MultipartFile file,
                                @RequestParam String title,
+                               @RequestParam String knowledgeId,
                                @RequestParam(required = false) String softwareVersion,
                                @RequestParam(required = false) String feature,
                                @RequestParam(required = false) String microservice,
                                @RequestParam(required = false) String description) {
         log.info("[POST] /processing/catman/storage/file/upload, file: {}, title: {}, description: {}",
                 file.getOriginalFilename(), title, description);
-        FileUploadDTO fileUploadDTO = FileUploadDTO.build(file, title, description);
+        FileUploadDTO fileUploadDTO = FileUploadDTO.build(file, title, description, knowledgeId);
         return fileService.upload(fileUploadDTO);
     }
 
@@ -59,10 +62,10 @@ public class FileController {
      * @return
      */
     @GetMapping("/list/{knowledgeId}")
-    public FileListVO list(@PathVariable String knowledgeId,
-                           @RequestParam(required = false) String search,
-                           @RequestParam(required = false) String fileType,
-                           @RequestParam(required = false) String status) {
+    public List<FileListVO> list(@PathVariable String knowledgeId,
+                                 @RequestParam(required = false) String search,
+                                 @RequestParam(required = false) String fileType,
+                                 @RequestParam(required = false) String status) {
         log.info("[GET] /processing/catman/storage/file/list/{}", knowledgeId);
         FileListDTO fileListDTO = FileListDTO.build(knowledgeId, search, fileType, status);
         return fileService.list(fileListDTO);

@@ -1,5 +1,6 @@
 package org.davision1dyx.catmanguard.api.storage.dto;
 
+import lombok.Builder;
 import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -9,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
  * @description
  */
 @Data
+@Builder
 public class FileRecognizeDTO {
 
     private String fileId;

@@ -54,6 +54,7 @@ CREATE TABLE file_info (
    description TEXT,
    upload_user VARCHAR(255),
    expire_time TIMESTAMP,
+   knowledge_id VARCHAR(255),
    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
    lock_version INT DEFAULT 0,
@@ -63,6 +64,7 @@ CREATE TABLE file_info (
 -- 索引
 CREATE UNIQUE INDEX uk_file_id ON file_info(file_id);
 CREATE INDEX idx_status ON file_info(status);
+CREATE INDEX idx_knowledge_id ON file_info(knowledge_id);
 
 -- 字段注释
 COMMENT ON TABLE file_info IS '文件元数据表,存储文件基本信息和解析状态';
@@ -79,6 +81,7 @@ COMMENT ON COLUMN file_info.extension IS '文件扩展信息';
 COMMENT ON COLUMN file_info.description IS '文件描述';
 COMMENT ON COLUMN file_info.upload_user IS '上传用户';
 COMMENT ON COLUMN file_info.expire_time IS '过期时间';
+COMMENT ON COLUMN file_info.knowledge_id IS '所属知识库ID';
 COMMENT ON COLUMN file_info.create_time IS '创建时间';
 COMMENT ON COLUMN file_info.update_time IS '更新时间';
 COMMENT ON COLUMN file_info.lock_version IS '锁版本';

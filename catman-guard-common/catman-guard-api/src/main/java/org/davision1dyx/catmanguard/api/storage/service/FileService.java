@@ -11,6 +11,7 @@ import org.davision1dyx.catmanguard.api.storage.vo.FileSplitVO;
 import org.davision1dyx.catmanguard.api.storage.vo.FileUploadVO;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * @author Davison
@@ -23,7 +24,7 @@ public interface FileService {
      */
     FileUploadVO upload(FileUploadDTO fileUploadDTO);
 
-    FileListVO list(FileListDTO fileListDTO);
+    List<FileListVO> list(FileListDTO fileListDTO);
 
     void delete(String fileId);
 

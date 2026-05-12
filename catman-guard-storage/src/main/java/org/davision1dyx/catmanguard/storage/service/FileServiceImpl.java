@@ -6,16 +6,11 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.davision1dyx.catmanguard.api.conversation.service.MultiModalService;
-import org.davision1dyx.catmanguard.api.storage.dto.FileListDTO;
-import org.davision1dyx.catmanguard.api.storage.dto.FileRecognizeDTO;
-import org.davision1dyx.catmanguard.api.storage.dto.FileSplitDTO;
-import org.davision1dyx.catmanguard.api.storage.dto.FileUploadDTO;
+import org.davision1dyx.catmanguard.api.storage.dto.*;
 import org.davision1dyx.catmanguard.api.storage.service.FileService;
-import org.davision1dyx.catmanguard.api.storage.vo.ChunkVO;
-import org.davision1dyx.catmanguard.api.storage.vo.FileListVO;
-import org.davision1dyx.catmanguard.api.storage.vo.FileRecognizeVO;
-import org.davision1dyx.catmanguard.api.storage.vo.FileSplitVO;
-import org.davision1dyx.catmanguard.api.storage.vo.FileUploadVO;
+import org.davision1dyx.catmanguard.api.storage.service.KnowledgeService;
+import org.davision1dyx.catmanguard.api.storage.vo.*;
+import org.davision1dyx.catmanguard.base.constant.CommonConstant;
 import org.davision1dyx.catmanguard.base.exception.BizException;
 import org.davision1dyx.catmanguard.base.exception.ErrorCode;
 import org.davision1dyx.catmanguard.base.util.FileUtil;
@@ -32,11 +27,15 @@ import org.davision1dyx.catmanguard.storage.mapper.FileInfoMapper;
 import org.davision1dyx.catmanguard.storage.model.FileChunk;
 import org.davision1dyx.catmanguard.storage.model.FileInfo;
 import org.davision1dyx.catmanguard.storage.pojo.StorageHandleInfo;
+import io.minio.GetObjectArgs;
+import io.minio.MinioClient;
 import org.springframework.ai.document.Document;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -61,19 +60,30 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
     private final ReaderHandler readerHandler;
     private final MultiModalService multiModalService;
     private final ChunkServiceImpl fileChunkService;
+    private final KnowledgeService knowledgeService;
 
-    public FileServiceImpl(FileProperties fileProperties, StorageHandler storageHandler, RecognitionHandler recognitionHandler, ReaderHandler readerHandler, MultiModalService multiModalService, ChunkServiceImpl fileChunkService) {
+    @Autowired(required = false)
+    private MinioClient minioClient;
+
+    public FileServiceImpl(FileProperties fileProperties, StorageHandler storageHandler, RecognitionHandler recognitionHandler, ReaderHandler readerHandler, MultiModalService multiModalService, ChunkServiceImpl fileChunkService, KnowledgeService knowledgeService) {
         this.fileProperties = fileProperties;
         this.storageHandler = storageHandler;
         this.recognitionHandler = recognitionHandler;
         this.readerHandler = readerHandler;
         this.multiModalService = multiModalService;
         this.fileChunkService = fileChunkService;
+        this.knowledgeService = knowledgeService;
     }
 
     @Override
     public FileUploadVO upload(FileUploadDTO fileUploadDTO) {
         log.info("开始上传文件: {}", fileUploadDTO.getFile().getOriginalFilename());
+
+        List<KnowledgeVO> knowledgeVOS = knowledgeService.listKnowledge(KnowledgeListDTO.builder().knowledgeId(fileUploadDTO.getKnowledgeId()).build());
+        if (knowledgeVOS.isEmpty()) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "知识库不存在");
+        }
+
         long size = fileUploadDTO.getFile().getSize();
         // 1. 源文件存储到存储介质
         FileMode mode = fileProperties.getMode();
@@ -87,15 +97,18 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
     }
 
     @Override
-    public FileListVO list(FileListDTO fileListDTO) {
+    public List<FileListVO> list(FileListDTO fileListDTO) {
         log.info("开始查询文件列表, knowledgeId: {}, search: {}, fileType: {}, status: {}",
                 fileListDTO.getKnowledgeId(), fileListDTO.getSearch(),
                 fileListDTO.getFileType(), fileListDTO.getStatus());
 
         LambdaQueryWrapper<FileInfo> queryWrapper = new LambdaQueryWrapper<>();
+        if (fileListDTO.getKnowledgeId() != null && !fileListDTO.getKnowledgeId().isEmpty()) {
+            queryWrapper.eq(FileInfo::getKnowledgeId, fileListDTO.getKnowledgeId());
+        }
         if (fileListDTO.getSearch() != null && !fileListDTO.getSearch().isEmpty()) {
-            queryWrapper.like(FileInfo::getFileTitle, fileListDTO.getSearch())
-                    .or().like(FileInfo::getFileName, fileListDTO.getSearch());
+            queryWrapper.and(wrapper -> wrapper.like(FileInfo::getFileTitle, fileListDTO.getSearch())
+                    .or().like(FileInfo::getFileName, fileListDTO.getSearch()));
         }
         if (fileListDTO.getFileType() != null && !fileListDTO.getFileType().isEmpty()) {
             queryWrapper.eq(FileInfo::getFileType, fileListDTO.getFileType());
@@ -106,8 +119,8 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
 
         List<FileInfo> fileInfoList = list(queryWrapper);
 
-        List<FileListVO.FileItemVO> data = fileInfoList.stream().map(f -> {
-            return FileListVO.FileItemVO.build(
+        List<FileListVO> data = fileInfoList.stream().map(f -> {
+            return FileListVO.build(
                     f.getFileId(),
                     f.getFileTitle(),
                     f.getFileName(),
@@ -122,7 +135,7 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
             );
         }).collect(java.util.stream.Collectors.toList());
 
-        return FileListVO.build(data);
+        return data;
     }
 
     @Override
@@ -134,6 +147,81 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
         remove(queryWrapper);
         // TODO 对storage进行删除
     }
+
+    public FileRecognizeVO recognize(String fileId) throws IOException {
+        // 0. 更新状态
+        update(new LambdaUpdateWrapper<FileInfo>().eq(FileInfo::getFileId, fileId).set(FileInfo::getStatus, FileStatus.CONVERTING.name()));
+
+        FileInfo fileInfo = getOne(new LambdaQueryWrapper<FileInfo>().eq(FileInfo::getFileId, fileId));
+
+        InputStream inputStream = getFileInputStream(fileInfo.getUrl(), fileInfo.getStorageType());
+
+        String recognizedPath = recognitionHandler.handle(inputStream, fileInfo.getFileName());
+
+        // 2. 文件存储
+        FileMode fileMode = fileProperties.getMode();
+
+        // 2.1查找所有的 md 文件和图片文件
+        Path mdFile = null;
+        java.util.List<Path> imageFiles = new java.util.ArrayList<>();
+
+        try (Stream<Path> paths = Files.walk(Path.of(recognizedPath))) {
+            for (Path path : paths.toList()) {
+                if (Files.isRegularFile(path)) {
+                    String fileName = path.getFileName().toString().toLowerCase();
+                    if (fileName.endsWith(".md")) {
+                        mdFile = path;
+                    } else if (fileName.endsWith(".png") || fileName.endsWith(".jpg") ||
+                            fileName.endsWith(".jpeg") || fileName.endsWith(".gif") ||
+                            fileName.endsWith(".webp") || fileName.endsWith(".bmp")) {
+                        imageFiles.add(path);
+                    }
+                }
+            }
+        }
+
+        if (mdFile == null) {
+            throw new BizException(ErrorCode.ERROR, "文件中没有找到 markdown 文件");
+        }
+
+        // 2.2 上传图片，建立本地文件名与图片url的映射
+        log.info("找到 Markdown 文件: {}, 图片文件数量: {}", mdFile, imageFiles.size());
+        Map<String, String> imageUrlMap = new HashMap<>();
+        String baseObjectName = "CONVERT_" + fileInfo.getFileTitle() + "/";
+
+        for (Path imagePath : imageFiles) {
+            String imageName = imagePath.getFileName().toString();
+            byte[] imageBytes = FileUtil.readFileToBytes(imagePath);
+            String contentType = FileUtil.getImageContentType(imageName);
+            String objectName = baseObjectName + "images/" + imageName;
+            StorageHandleInfo storageHandleInfo = storageHandler.handleUpload(imageBytes, objectName, contentType, fileMode);
+            String imageUrl = storageHandleInfo.getUrl();
+            imageUrlMap.put(imageName, imageUrl);
+            log.info("图片已上传 {} -> {}", imageName, imageUrl);
+        }
+
+        // 读取 md 文件内容
+        String mdContent = FileUtil.readFileToString(mdFile);
+
+        // 替换 md 中的图片地址为 MinIO 地址，并生成图片描述
+        String processedMdContent = processMarkdownImages(mdContent, imageUrlMap);
+
+        // 上传处理后的 md 文件到 MinIO
+        String mdObjectName = baseObjectName + mdFile.getFileName().toString();
+        StorageHandleInfo storageHandleInfo = storageHandler.handleUpload(processedMdContent.getBytes(StandardCharsets.UTF_8), mdObjectName,
+                "text/markdown", fileMode);
+        String convertedUrl = storageHandleInfo.getUrl();
+        log.info("Markdown 文件已上传, url: {}", convertedUrl);
+
+        // 3. 更新状态
+        update(new LambdaUpdateWrapper<FileInfo>()
+                .eq(FileInfo::getFileId, fileId)
+                .set(FileInfo::getConvertedUrl, convertedUrl)
+                .set(FileInfo::getStatus, FileStatus.CONVERTED.name()));
+
+        return FileRecognizeVO.build(convertedUrl);
+    }
+
 
     @Override
     public FileRecognizeVO recognize(FileRecognizeDTO fileRecognizeDTO) throws IOException {
@@ -252,7 +340,13 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
                 fileSplitDTO.getFileId(), fileSplitDTO.getChunkType(),
                 fileSplitDTO.getChunkSize(), fileSplitDTO.getChunkOverlap());
 
-        // TODO 分片操作其实还有一个识别的操作在内。
+        // 文件识别
+        try {
+            recognize(fileSplitDTO.getFileId());
+        } catch (Exception e) {
+            throw new BizException(ErrorCode.ERROR, "文件识别失败", e);
+        }
+
         split(fileSplitDTO);
 
         List<FileChunk> chunks = fileChunkService.list(new LambdaQueryWrapper<FileChunk>()
@@ -308,5 +402,28 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
         matcher.appendTail(result);
 
         return result.toString();
+    }
+
+    private InputStream getFileInputStream(String fileUrl, String storageType) {
+        try {
+            if (FileMode.Local.name().equals(storageType)) {
+                return Files.newInputStream(Paths.get(fileUrl));
+            } else if (FileMode.Minio.name().equals(storageType)) {
+                String endpoint = fileProperties.getMinio().getEndpoint();
+                String bucketName = fileProperties.getMinio().getBucketName();
+                String objectName = fileUrl.replace(endpoint + CommonConstant.FILE_SEPARATOR + bucketName + CommonConstant.FILE_SEPARATOR, "");
+                return minioClient.getObject(
+                        GetObjectArgs.builder()
+                                .bucket(bucketName)
+                                .object(objectName)
+                                .build()
+                );
+            } else {
+                throw new BizException(ErrorCode.NO_FILE_TYPE_SUPPORT, "不支持的存储类型: " + storageType);
+            }
+        } catch (Exception e) {
+            log.error("获取文件输入流失败, fileUrl: {}, storageType: {}", fileUrl, storageType, e);
+            throw new BizException(ErrorCode.ERROR, "获取文件输入流失败");
+        }
     }
 }

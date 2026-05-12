@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 /**
@@ -32,5 +33,15 @@ public class RecognitionHandler {
                 })
                 .findFirst().orElseThrow(() -> new BizException(ErrorCode.NO_FILE_TYPE_SUPPORT));
         return recognitionStrategy.recognize(file);
+    }
+
+    public String handle(InputStream inputStream, String fileName) throws IOException {
+        RecognitionStrategy recognitionStrategy = recognitionStrategies.stream()
+                .filter(strategy -> {
+                    String fileType = FileUtil.getFileType(fileName);
+                    return strategy.support(fileType);
+                })
+                .findFirst().orElseThrow(() -> new BizException(ErrorCode.NO_FILE_TYPE_SUPPORT));
+        return recognitionStrategy.recognize(inputStream, fileName);
     }
 }

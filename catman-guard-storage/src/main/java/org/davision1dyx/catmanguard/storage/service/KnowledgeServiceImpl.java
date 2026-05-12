@@ -29,12 +29,16 @@ public class KnowledgeServiceImpl extends ServiceImpl<KnowledgeMapper, Knowledge
 
     @Override
     public List<KnowledgeVO> listKnowledge(KnowledgeListDTO dto) {
-        log.info("获取知识库列表, search: {}", dto.getSearch());
+        log.info("获取知识库列表, search: {}, knowledgeId: {}", dto.getSearch(), dto.getKnowledgeId());
 
         LambdaQueryWrapper<Knowledge> queryWrapper = new LambdaQueryWrapper<>();
         if (dto.getSearch() != null && !dto.getSearch().isEmpty()) {
             queryWrapper.like(Knowledge::getName, dto.getSearch())
                     .or().like(Knowledge::getDescription, dto.getSearch());
+        }
+
+        if (dto.getKnowledgeId() != null && !dto.getKnowledgeId().isEmpty()) {
+            queryWrapper.eq(Knowledge::getKnowledgeId, dto.getKnowledgeId());
         }
 
         List<Knowledge> knowledgeList = list(queryWrapper);

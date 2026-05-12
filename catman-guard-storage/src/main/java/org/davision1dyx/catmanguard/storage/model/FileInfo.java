@@ -87,4 +87,10 @@ public class FileInfo extends BaseModel {
      */
     @TableField("expire_time")
     private LocalDateTime expireTime;
+
+    /**
+     * 所属知识库ID
+     */
+    @TableField("knowledge_id")
+    private String knowledgeId;
 }
