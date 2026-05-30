@@ -12,6 +12,7 @@ import org.davision1dyx.catmanguard.api.storage.vo.FileUploadVO;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 /**

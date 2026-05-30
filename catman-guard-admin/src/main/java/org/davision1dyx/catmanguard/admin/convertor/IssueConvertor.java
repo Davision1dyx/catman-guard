@@ -17,11 +17,23 @@ public interface IssueConvertor {
     IssueConvertor INSTANCE = Mappers.getMapper(IssueConvertor.class);
 
     @Mapping(source = "issueId", target = "id")
+    @Mapping(source = "submitterId", target = "submitterId")
+    @Mapping(source = "submitterName", target = "submitterName")
+    @Mapping(source = "submitterEmail", target = "submitterEmail")
+    @Mapping(source = "assigneeId", target = "assigneeId")
+    @Mapping(source = "assigneeName", target = "assigneeName")
+    @Mapping(source = "assigneeEmail", target = "assigneeEmail")
     @Mapping(source = "createTime", target = "createdTime")
     @Mapping(source = "updateTime", target = "updatedTime")
     IssueVO mapToVO(Issue issue);
 
     @Mapping(source = "issueId", target = "id")
+    @Mapping(source = "submitterId", target = "submitterId")
+    @Mapping(source = "submitterName", target = "submitterName")
+    @Mapping(source = "submitterEmail", target = "submitterEmail")
+    @Mapping(source = "assigneeId", target = "assigneeId")
+    @Mapping(source = "assigneeName", target = "assigneeName")
+    @Mapping(source = "assigneeEmail", target = "assigneeEmail")
     @Mapping(source = "createTime", target = "createdTime")
     @Mapping(source = "updateTime", target = "updatedTime")
     IssueDetailVO mapToDetailVO(Issue issue);

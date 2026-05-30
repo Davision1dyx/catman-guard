@@ -7,4 +7,5 @@ package org.davision1dyx.catmanguard.api.conversation.service;
  */
 public interface MultiModalService {
     String generateImageDescription(String imageUrl);
+    String generateImageDescription(byte[] imageData);
 }

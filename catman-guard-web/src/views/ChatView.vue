@@ -220,10 +220,10 @@
 
 <script setup>
 import { ref, reactive, onMounted, nextTick } from 'vue'
-import axios from 'axios'
 import Sidebar from '../components/Sidebar.vue'
 import TopHeader from '../components/TopHeader.vue'
 import { Search, Bell, ArrowDown } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 // 历史对话存储
 const HISTORY_KEY = 'catman_chat_histories'
@@ -303,9 +303,9 @@ const renderMarkdown = (text) => {
 // 获取API端点
 const getApiEndpoint = () => {
   if (selectedModes.websearch) {
-    return '/processing/catman/chat/websearch'
+    return '/processing/catman/conversation/chat/websearch'
   }
-  return '/processing/catman/chat/chat'
+  return '/processing/catman/conversation/chat/chat'
 }
 
 // 滚动到底部
@@ -335,21 +335,29 @@ const sendMessage = async () => {
   thinkingMessages.value = [{ content: '正在处理...', expanded: true }]
   recommendQuestions.value = []
   showIntentCard.value = false
+  currentAiContent = ''
+  currentAiThinking = ''
+  currentReferences = []
 
-  inputMessage.value = ''
+  inputMessage.value = message
   await scrollToBottom()
 
   try {
     const apiEndpoint = getApiEndpoint()
-    const response = await axios.get(apiEndpoint, {
-      params: {
-        message,
-        conversationId: currentConversationId.value
-      },
-      responseType: 'stream'
+    const url = `${apiEndpoint}?message=${encodeURIComponent(message)}&conversationId=${encodeURIComponent(currentConversationId.value)}`
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/event-stream'
+      }
     })
 
-    const reader = response.data.getReader()
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const reader = response.body.getReader()
     const decoder = new TextDecoder('utf-8')
     let buffer = ''
 
@@ -364,16 +372,29 @@ const sendMessage = async () => {
 
       buffer += decoder.decode(value, { stream: true })
 
-      const lines = buffer.split('\n').filter(l => l.trim())
-      buffer = ''
+      let lines = []
+      while (buffer.includes('\n')) {
+        const newlineIndex = buffer.indexOf('\n')
+        let line = buffer.substring(0, newlineIndex).trim()
+        buffer = buffer.substring(newlineIndex + 1)
+        if (line) {
+          lines.push(line)
+        }
+      }
 
-      for (const line of lines) {
+      for (const rawLine of lines) {
+        let line = rawLine
+        if (line.startsWith('data:')) {
+          line = line.substring(5).trim()
+        }
+        if (!line) continue
+
         try {
           const data = JSON.parse(line)
           handleResponseData(data)
         } catch (e) {
           if (line.includes('{') && !line.includes('}')) {
-            buffer = line
+            buffer = line + '\n' + buffer
           }
         }
       }
@@ -383,18 +404,25 @@ const sendMessage = async () => {
     await scrollToBottom()
     saveCurrentConversation()
 
+    isLoading.value = false
+    isSending.value = false
+    isStopped.value = false
+    await nextTick()
+
   } catch (error) {
     console.error('发送失败:', error)
+    ElMessage.error('发送消息失败: ' + error.message)
   } finally {
     isLoading.value = false
     isSending.value = false
     isStopped.value = false
-    await scrollToBottom()
   }
 }
 
 // 当前AI消息内容
 let currentAiContent = ''
+let currentAiThinking = ''
+let currentReferences = []
 
 // 处理响应数据
 const handleResponseData = (data) => {
@@ -403,25 +431,57 @@ const handleResponseData = (data) => {
       let lastMsg = messages.value[messages.value.length - 1]
       if (!lastMsg || lastMsg.type !== 'ai') {
         currentAiContent = ''
-        messages.value.push({ type: 'ai', content: '' })
+        messages.value.push({ type: 'ai', content: '', references: [], thinking: '' })
         lastMsg = messages.value[messages.value.length - 1]
       }
       currentAiContent += data.content
       lastMsg.content = currentAiContent
       break
+
+    case 'thinking':
+      currentAiThinking = data.content
+      if (thinkingMessages.value.length > 0) {
+        thinkingMessages.value[0].content = data.content
+      } else {
+        thinkingMessages.value = [{ content: data.content, expanded: false }]
+      }
+      const aiMsg = messages.value[messages.value.length - 1]
+      if (aiMsg && aiMsg.type === 'ai') {
+        aiMsg.thinking = data.content
+      }
+      break
+
+    case 'reference':
+      try {
+        let refs = typeof data.content === 'string' ? JSON.parse(data.content) : data.content
+        if (Array.isArray(refs)) {
+          currentReferences = [...currentReferences, ...refs]
+        } else if (typeof refs === 'object') {
+          currentReferences.push(refs)
+        }
+        const aiMsgRef = messages.value[messages.value.length - 1]
+        if (aiMsgRef && aiMsgRef.type === 'ai') {
+          aiMsgRef.references = currentReferences
+        }
+      } catch (e) {
+        console.error('解析参考信息失败:', e)
+      }
+      break
+
     case 'recommend':
       try {
-        const questions = JSON.parse(data.content)
-        recommendQuestions.value = questions
+        let questions = typeof data.content === 'string' ? JSON.parse(data.content) : data.content
+        if (Array.isArray(questions)) {
+          recommendQuestions.value = questions
+        }
         currentAiContent = ''
       } catch (e) {
         console.error('解析推荐问题失败:', e)
       }
       break
-    case 'thinking':
-      if (thinkingMessages.value.length > 0) {
-        thinkingMessages.value[0].content = data.content
-      }
+
+    case 'error':
+      ElMessage.error(data.content || '发生错误')
       break
   }
   scrollToBottom()

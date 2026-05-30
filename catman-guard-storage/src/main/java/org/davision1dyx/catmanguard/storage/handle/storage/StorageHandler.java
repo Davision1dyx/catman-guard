@@ -42,4 +42,9 @@ public class StorageHandler {
                 .map(strategy -> strategy.download(fileUrl)).findFirst();
         return download.orElseThrow(() -> new BizException(ErrorCode.NO_FILE_TYPE_SUPPORT));
     }
+
+    public void handleDelete(String fileUrl, FileMode fileMode) {
+        storageStrategies.stream().filter(strategy -> strategy.support(fileMode))
+                .findFirst().ifPresent(strategy -> strategy.delete(fileUrl));
+    }
 }

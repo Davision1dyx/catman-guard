@@ -436,19 +436,21 @@
   </div>
 </template>
 
-<script setup lang="ts">import { ref, computed } from 'vue';
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue';
 import Sidebar from '../components/Sidebar.vue';
 import TopHeader from '../components/TopHeader.vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Search, Bell, Plus, Eye, Edit, UserFilled, Refresh, User, Link, Download } from '@element-plus/icons-vue';
-// 用户接口定义
+import { issueApi, staffApi } from '../services/api';
+
 interface User {
  id: string;
  name: string;
  email: string;
  role: 'admin' | 'staff' | 'manager';
 }
-// 工单接口定义
+
 interface Ticket {
  id: string;
  title: string;
@@ -463,6 +465,7 @@ interface Ticket {
  attachments: Attachment[];
  replies: Reply[];
 }
+
 interface Attachment {
  id: string;
  name: string;
@@ -470,6 +473,7 @@ interface Attachment {
  type: string;
  uploadedAt: Date;
 }
+
 interface Reply {
  id: string;
  author: User;
@@ -477,7 +481,7 @@ interface Reply {
  type: 'COMMENT' | 'UPDATE' | 'RESOLUTION';
  createdAt: Date;
 }
-// 响应式数据
+
 const showTicketDetailModal = ref(false);
 const showEditTicketModal = ref(false);
 const showAssignTicketModal = ref(false);
@@ -488,143 +492,114 @@ const newReplyContent = ref('');
 const selectedAssignee = ref('');
 const selectedStatus = ref('');
 const statusComment = ref('');
-// 筛选条件
 const searchQuery = ref('');
 const filterStatus = ref('');
 const filterPriority = ref('');
 const filterAssignee = ref('');
 const filterType = ref('');
-// 用户列表
-const users: User[] = [
- { id: 'user-1', name: '张伟', email: 'zhangwei@example.com', role: 'staff' },
- { id: 'user-2', name: '李娜', email: 'lina@example.com', role: 'staff' },
- { id: 'user-3', name: '王强', email: 'wangqiang@example.com', role: 'staff' },
- { id: 'user-4', name: '陈丽', email: 'chenli@example.com', role: 'manager' },
- { id: 'user-5', name: '赵刚', email: 'zhaogang@example.com', role: 'admin' }
-];
-// 模拟工单数据
-const tickets = ref<Ticket[]>([
- {
- id: 'TKT-001',
- title: 'API网关服务响应超时',
- description: '用户反馈API网关在高峰时段响应时间超过5秒，影响业务正常运行。初步判断可能是负载过高导致。',
- type: 'INCIDENT',
- priority: 'HIGH',
- status: 'IN_PROGRESS',
- submitter: { id: 'user-1', name: '张伟', email: 'zhangwei@example.com', role: 'staff' },
- assignee: { id: 'user-2', name: '李娜', email: 'lina@example.com', role: 'staff' },
- createdAt: new Date(Date.now() - 86400000 * 1),
- updatedAt: new Date(Date.now() - 3600000 * 2),
- attachments: [
- { id: 'att-1', name: 'error_logs.txt', size: 10240, type: 'text/plain', uploadedAt: new Date(Date.now() - 86400000 * 1) },
- { id: 'att-2', name: 'performance_report.pdf', size: 204800, type: 'application/pdf', uploadedAt: new Date(Date.now() - 86400000 * 1) }
- ],
- replies: [
- {
- id: 'rep-1',
- author: { id: 'user-2', name: '李娜', email: 'lina@example.com', role: 'staff' },
- content: '已收到工单，正在检查API网关的负载情况。初步发现是某个微服务响应过慢导致的连锁反应。',
- type: 'COMMENT',
- createdAt: new Date(Date.now() - 86400000 * 1 + 3600000 * 2)
- },
- {
- id: 'rep-2',
- author: { id: 'user-2', name: '李娜', email: 'lina@example.com', role: 'staff' },
- content: '已定位问题，是订单服务的数据库查询效率低下导致。已优化查询语句，系统响应恢复正常。',
- type: 'UPDATE',
- createdAt: new Date(Date.now() - 3600000 * 2)
- }
- ]
- },
- {
- id: 'TKT-002',
- title: '新增用户权限管理功能',
- description: '需要开发一套用户权限管理系统，支持角色分配、权限控制等功能。预计需要2周开发时间。',
- type: 'REQUEST',
- priority: 'MEDIUM',
- status: 'ASSIGNED',
- submitter: { id: 'user-3', name: '王强', email: 'wangqiang@example.com', role: 'staff' },
- assignee: { id: 'user-4', name: '陈丽', email: 'chenli@example.com', role: 'manager' },
- createdAt: new Date(Date.now() - 86400000 * 3),
- updatedAt: new Date(Date.now() - 86400000 * 1),
- attachments: [
- { id: 'att-3', name: 'requirement_doc.docx', size: 51200, type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', uploadedAt: new Date(Date.now() - 86400000 * 3) }
- ],
- replies: [
- {
- id: 'rep-3',
- author: { id: 'user-4', name: '陈丽', email: 'chenli@example.com', role: 'manager' },
- content: '需求已确认，将安排开发团队进行评估和开发计划制定。',
- type: 'COMMENT',
- createdAt: new Date(Date.now() - 86400000 * 1)
- }
- ]
- },
- {
- id: 'TKT-003',
- title: '数据库连接池频繁耗尽',
- description: '生产环境数据库连接池经常达到上限，导致部分请求失败。需要进行容量规划和优化。',
- type: 'PROBLEM',
- priority: 'CRITICAL',
- status: 'COMPLETED',
- submitter: { id: 'user-5', name: '赵刚', email: 'zhaogang@example.com', role: 'admin' },
- assignee: { id: 'user-1', name: '张伟', email: 'zhangwei@example.com', role: 'staff' },
- createdAt: new Date(Date.now() - 86400000 * 7),
- updatedAt: new Date(Date.now() - 86400000 * 2),
- attachments: [
- { id: 'att-4', name: 'connection_pool_analysis.xlsx', size: 153600, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', uploadedAt: new Date(Date.now() - 86400000 * 7) }
- ],
- replies: [
- {
- id: 'rep-4',
- author: { id: 'user-1', name: '张伟', email: 'zhangwei@example.com', role: 'staff' },
- content: '已完成数据库连接池的分析，发现是某些长时间运行的查询占用了连接。已优化查询逻辑并增加了连接池大小。',
- type: 'RESOLUTION',
- createdAt: new Date(Date.now() - 86400000 * 2)
- }
- ]
- },
- {
- id: 'TKT-004',
- title: '部署新版本支付服务',
- description: '需要部署支付服务的新版本，包含多项安全修复和性能改进。计划在周末进行。',
- type: 'CHANGE',
- priority: 'HIGH',
- status: 'ASSIGNED',
- submitter: { id: 'user-2', name: '李娜', email: 'lina@example.com', role: 'staff' },
- assignee: { id: 'user-3', name: '王强', email: 'wangqiang@example.com', role: 'staff' },
- createdAt: new Date(Date.now() - 86400000 * 2),
- updatedAt: new Date(Date.now() - 86400000 * 1),
- attachments: [
- { id: 'att-5', name: 'deployment_plan.pdf', size: 81920, type: 'application/pdf', uploadedAt: new Date(Date.now() - 86400000 * 2) }
- ],
- replies: []
- },
- {
- id: 'TKT-005',
- title: '用户登录失败率异常升高',
- description: '近两天用户登录失败率显著上升，可能存在安全攻击或配置问题。需要紧急排查。',
- type: 'INCIDENT',
- priority: 'CRITICAL',
- status: 'IN_PROGRESS',
- submitter: { id: 'user-4', name: '陈丽', email: 'chenli@example.com', role: 'manager' },
- assignee: { id: 'user-1', name: '张伟', email: 'zhangwei@example.com', role: 'staff' },
- createdAt: new Date(Date.now() - 3600000 * 6),
- updatedAt: new Date(Date.now() - 3600000 * 1),
- attachments: [
- { id: 'att-6', name: 'login_attempts.csv', size: 256000, type: 'text/csv', uploadedAt: new Date(Date.now() - 3600000 * 6) }
- ],
- replies: [
- {
- id: 'rep-5',
- author: { id: 'user-1', name: '张伟', email: 'zhangwei@example.com', role: 'staff' },
- content: '初步分析发现大量来自特定IP段的登录尝试，疑似暴力破解攻击。已临时封禁相关IP并加强了登录验证。',
- type: 'UPDATE',
- createdAt: new Date(Date.now() - 3600000 * 1)
- }
- ]
- }
-]);
+const loading = ref(false);
+
+const users = ref<User[]>([]);
+const tickets = ref<Ticket[]>([]);
+
+const fetchUsers = async () => {
+  try {
+    const response = await staffApi.list({})
+    const data = response.data || response
+    if (data && data.list) {
+      users.value = data.list.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        role: s.role || 'staff'
+      }))
+    }
+  } catch (error) {
+    console.error('Failed to fetch users:', error)
+  }
+}
+
+const fetchTickets = async () => {
+  loading.value = true
+  try {
+    const response = await issueApi.list({
+      status: filterStatus.value || undefined,
+      priority: filterPriority.value || undefined,
+      type: filterType.value || undefined
+    })
+    const data = response.data || response
+    if (data && data.list) {
+      tickets.value = data.list.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        type: item.type,
+        priority: item.priority,
+        status: item.status,
+        submitter: {
+          id: item.submitterId || '',
+          name: item.submitterName || 'Unknown',
+          email: item.submitterEmail || '',
+          role: 'staff'
+        },
+        assignee: {
+          id: item.assigneeId || '',
+          name: item.assigneeName || '',
+          email: item.assigneeEmail || '',
+          role: 'staff'
+        },
+        createdAt: new Date(item.createdTime),
+        updatedAt: new Date(item.updatedTime),
+        attachments: [],
+        replies: []
+      }))
+    }
+  } catch (error) {
+    console.error('Failed to fetch tickets:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const fetchTicketDetail = async (issueId: string) => {
+  try {
+    const response = await issueApi.getDetail(issueId)
+    const data = response.data || response
+    if (data) {
+      currentTicket.value = {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        type: data.type,
+        priority: data.priority,
+        status: data.status,
+        submitter: {
+          id: data.submitterId || '',
+          name: data.submitterName || 'Unknown',
+          email: data.submitterEmail || '',
+          role: 'staff'
+        },
+        assignee: {
+          id: data.assigneeId || '',
+          name: data.assigneeName || '',
+          email: data.assigneeEmail || '',
+          role: 'staff'
+        },
+        createdAt: new Date(data.createdTime),
+        updatedAt: new Date(data.updatedTime),
+        attachments: data.attachments || [],
+        replies: data.replies || []
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch ticket detail:', error)
+  }
+}
+
+onMounted(() => {
+  fetchUsers()
+  fetchTickets()
+})
 // 计算属性：筛选后的工单
 const filteredTickets = computed(() => {
  return tickets.value.filter(ticket => {
@@ -786,9 +761,10 @@ const canStoreVector = (ticket: Ticket | null) => {
  return ticket.status === 'COMPLETED';
 };
 // 模态框操作函数
-const viewTicket = (ticket: Ticket) => {
- currentTicket.value = ticket;
- showTicketDetailModal.value = true;
+const viewTicket = async (ticket: Ticket) => {
+  currentTicket.value = ticket;
+  showTicketDetailModal.value = true;
+  await fetchTicketDetail(ticket.id);
 };
 const editTicket = (ticket: Ticket | null) => {
  if (!ticket)
@@ -832,36 +808,50 @@ const closeStatusUpdateModal = () => {
 const createNewTicket = () => {
  ElMessage.info('新建工单功能开发中');
 };
-const saveEditedTicket = () => {
+const saveEditedTicket = async () => {
  if (!editedTicket.value)
  return;
- const index = tickets.value.findIndex(t => t.id === editedTicket.value!.id);
- if (index !== -1) {
- tickets.value[index] = { ...editedTicket.value };
+ try {
+ await issueApi.update(editedTicket.value.id, {
+ title: editedTicket.value.title,
+ description: editedTicket.value.description,
+ type: editedTicket.value.type,
+ priority: editedTicket.value.priority
+ })
+ await fetchTickets()
  ElMessage.success('工单已更新');
+ } catch (error) {
+ ElMessage.error('更新失败');
  }
  closeEditTicketModal();
 };
-const assignSelectedUser = () => {
+
+const assignSelectedUser = async () => {
  if (!currentTicket.value || !selectedAssignee.value)
  return;
- const user = users.find(u => u.id === selectedAssignee.value);
- if (user) {
- const index = tickets.value.findIndex(t => t.id === currentTicket.value!.id);
- if (index !== -1) {
- tickets.value[index].assignee = user;
+ try {
+ await issueApi.assign(currentTicket.value.id, {
+ assigneeId: selectedAssignee.value
+ })
+ await fetchTickets()
  ElMessage.success('工单已分配');
- }
+ } catch (error) {
+ ElMessage.error('分配失败');
  }
  closeAssignTicketModal();
 };
-const updateSelectedStatus = () => {
+
+const updateSelectedStatus = async () => {
  if (!currentTicket.value || !selectedStatus.value)
  return;
- const index = tickets.value.findIndex(t => t.id === currentTicket.value!.id);
- if (index !== -1) {
- tickets.value[index].status = selectedStatus.value as Ticket['status'];
+ try {
+ await issueApi.updateStatus(currentTicket.value.id, {
+ status: selectedStatus.value
+ })
+ await fetchTickets()
  ElMessage.success('状态已更新');
+ } catch (error) {
+ ElMessage.error('更新失败');
  }
  closeStatusUpdateModal();
 };
@@ -882,31 +872,32 @@ const addReply = () => {
  }
  newReplyContent.value = '';
 };
-const closeTicket = () => {
+const closeTicket = async () => {
  if (!currentTicket.value)
  return;
- ElMessageBox.confirm('确定要关闭此工单吗？', '提示', {
- confirmButtonText: '确定',
- cancelButtonText: '取消',
- type: 'warning'
- }).then(() => {
- const index = tickets.value.findIndex(t => t.id === currentTicket.value!.id);
- if (index !== -1) {
- tickets.value[index].status = 'COMPLETED';
+ try {
+ await issueApi.updateStatus(currentTicket.value.id, {
+ status: 'COMPLETED'
+ })
+ await fetchTickets()
  ElMessage.success('工单已关闭');
+ } catch (error) {
+ ElMessage.error('关闭失败');
  }
  closeTicketDetailModal();
- }).catch(() => {
- ElMessage.info('已取消关闭');
- });
 };
-const storeVector = () => {
+
+const storeVector = async () => {
  if (!currentTicket.value)
  return;
- const index = tickets.value.findIndex(t => t.id === currentTicket.value!.id);
- if (index !== -1) {
- tickets.value[index].status = 'VECTOR_STORED';
+ try {
+ await issueApi.updateStatus(currentTicket.value.id, {
+ status: 'VECTOR_STORED'
+ })
+ await fetchTickets()
  ElMessage.success('向量存储成功');
+ } catch (error) {
+ ElMessage.error('向量存储失败');
  }
  closeTicketDetailModal();
 };

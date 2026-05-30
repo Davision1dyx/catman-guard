@@ -1,9 +1,6 @@
 package org.davision1dyx.catmanguard.storage.handle.storage.strategy;
 
-import io.minio.GetObjectArgs;
-import io.minio.GetObjectResponse;
-import io.minio.MinioClient;
-import io.minio.PutObjectArgs;
+import io.minio.*;
 import lombok.extern.slf4j.Slf4j;
 import org.davision1dyx.catmanguard.base.constant.CommonConstant;
 import org.davision1dyx.catmanguard.base.util.FileUtil;
@@ -100,6 +97,23 @@ public class MinioStorageStrategy implements StorageStrategy {
         } catch (Exception e) {
             log.error("文件下载失败, 文件名：{}", fileUrl, e);
             return null;
+        }
+    }
+
+    @Override
+    public void delete(String fileUrl) {
+        try {
+            String endpoint = fileProperties.getMinio().getEndpoint();
+            String bucketName = fileProperties.getMinio().getBucketName();
+            String objectName = fileUrl.replace(endpoint + CommonConstant.FILE_SEPARATOR + bucketName + CommonConstant.FILE_SEPARATOR, "");
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectName)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.error("文件删除失败, 文件URL：{}", fileUrl, e);
         }
     }
 }

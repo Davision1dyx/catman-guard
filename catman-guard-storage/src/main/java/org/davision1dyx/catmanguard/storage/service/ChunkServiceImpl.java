@@ -66,6 +66,7 @@ public class ChunkServiceImpl extends ServiceImpl<FileChunkMapper, FileChunk> im
                 ChunkListVO.ChunkItemVO.build(
                         c.getChunkId(),
                         c.getContent(),
+                        c.getMetaData(),
                         c.getChunkIndex(),
                         (long) c.getContent().length()
                 )

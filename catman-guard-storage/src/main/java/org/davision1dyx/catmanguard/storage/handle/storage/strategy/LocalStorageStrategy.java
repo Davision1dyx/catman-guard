@@ -70,4 +70,16 @@ public class LocalStorageStrategy implements StorageStrategy {
             return null;
         }
     }
+
+    @Override
+    public void delete(String fileUrl) {
+        try {
+            File file = new File(fileUrl);
+            if (file.exists()) {
+                file.delete();
+            }
+        } catch (Exception e) {
+            log.error("文件删除失败, 文件URL：{}", fileUrl, e);
+        }
+    }
 }

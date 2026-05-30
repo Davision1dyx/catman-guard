@@ -18,4 +18,6 @@ public interface StorageStrategy {
     StorageHandleInfo upload(byte[] bytes, String fileName, String contentType);
 
     byte[] download(String fileUrl);
+
+    void delete(String fileUrl);
 }

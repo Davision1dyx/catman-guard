@@ -12,7 +12,7 @@ import java.io.InputStream;
  */
 public interface RecognitionStrategy {
 
-    String unzipTmpPath = "/home/catman/tmp";
+    String unzipTmpPath = "/Users/dyxfight/Document/catman";
 
     /**
      * 是否支持该文件类型

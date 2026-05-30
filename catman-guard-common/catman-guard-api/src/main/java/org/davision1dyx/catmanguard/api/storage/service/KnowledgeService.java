@@ -42,4 +42,18 @@ public interface KnowledgeService {
      * @param knowledgeId 知识库ID
      */
     void deleteKnowledge(String knowledgeId);
+
+    /**
+     * 更新知识库文件数量
+     * @param knowledgeId 知识库ID
+     * @param delta 变化量（增加为正，减少为负）
+     */
+    void updateFileCount(String knowledgeId, int delta);
+
+    /**
+     * 更新知识库分片数量
+     * @param knowledgeId 知识库ID
+     * @param delta 变化量（增加为正，减少为负）
+     */
+    void updateChunkCount(String knowledgeId, int delta);
 }

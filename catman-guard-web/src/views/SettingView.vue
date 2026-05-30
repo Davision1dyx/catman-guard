@@ -513,7 +513,7 @@ const systemSettings = reactive({
   systemName: '智维 Agent',
   systemDescription: '智能运维Agent系统，提供智能化的运维问答服务',
   theme: 'light',
-  llmEndpoint: 'http://localhost:8080/processing/catman/chat/chat',
+  llmEndpoint: 'http://localhost:9988/processing/catman/conversation/chat/chat',
   apiKey: '',
   modelName: 'gpt-4',
   maxTokens: 2000,
@@ -642,7 +642,7 @@ const resetSystemSettings = () => {
   systemSettings.systemName = '智维 Agent'
   systemSettings.systemDescription = '智能运维Agent系统，提供智能化的运维问答服务'
   systemSettings.theme = 'light'
-  systemSettings.llmEndpoint = 'http://localhost:8080/processing/catman/chat/chat'
+  systemSettings.llmEndpoint = 'http://localhost:9988/processing/catman/conversation/chat/chat'
   systemSettings.apiKey = ''
   systemSettings.modelName = 'gpt-4'
   systemSettings.maxTokens = 2000

@@ -4,6 +4,7 @@ import org.davision1dyx.catmanguard.storage.enums.FileType;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.TextReader;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
@@ -12,6 +13,7 @@ import java.util.List;
 * @date 2026-05-02
 * @description TXT读取策略
 */
+@Component
 public class TxtReaderStrategy implements ReaderStrategy {
     @Override
     public boolean support(String fileType) {

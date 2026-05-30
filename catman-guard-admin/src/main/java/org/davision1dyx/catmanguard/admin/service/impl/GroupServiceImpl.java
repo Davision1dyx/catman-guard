@@ -13,6 +13,7 @@ import org.davision1dyx.catmanguard.base.exception.ErrorCode;
 import org.davision1dyx.catmanguard.api.admin.dto.CreateGroupDTO;
 import org.davision1dyx.catmanguard.api.admin.dto.UpdateGroupDTO;
 import org.davision1dyx.catmanguard.api.admin.vo.GroupVO;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -30,7 +31,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, Group> implements
 
     private final StaffService staffService;
 
-    public GroupServiceImpl(StaffService staffService) {
+    public GroupServiceImpl(@Lazy StaffService staffService) {
         this.staffService = staffService;
     }
 

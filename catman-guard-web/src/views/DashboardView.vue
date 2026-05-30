@@ -522,16 +522,19 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import Sidebar from '../components/Sidebar.vue'
 import TopHeader from '../components/TopHeader.vue'
-import { 
-  Message, List, Files, UserFilled, ArrowUp, Minus, 
-  Collection, ZoomIn, Search, User 
+import { ElMessage } from 'element-plus'
+import {
+  Message, List, Files, UserFilled, ArrowUp, Minus,
+  Collection, ZoomIn, Search, User
 } from '@element-plus/icons-vue'
+import { dashboardApi, groupApi, staffApi } from '../services/api'
 
 const dateRange = ref([])
 const activeTrendTab = ref('week')
+const loading = ref(false)
 
 const trendTabs = [
   { label: '本周', value: 'week' },
@@ -540,74 +543,167 @@ const trendTabs = [
 ]
 
 const stats = ref({
-  totalConversations: 856,
-  totalTickets: 156,
-  documentCount: 89,
-  onlineStaff: 12,
-  qaResolveRate: 72,
-  solvedInQA: 616,
-  convertedToTicket: 240
+  totalConversations: 0,
+  totalTickets: 0,
+  documentCount: 0,
+  onlineStaff: 0,
+  qaResolveRate: 0,
+  solvedInQA: 0,
+  convertedToTicket: 0
 })
 
 const ticketStatusDistribution = ref({
-  pending: 12,
-  processing: 28,
-  resolved: 85,
-  closed: 31
+  pending: 0,
+  processing: 0,
+  resolved: 0,
+  closed: 0
 })
 
-const weeklyQAData = ref([45, 52, 38, 56, 48, 62, 55])
-const weeklyTicketData = ref([12, 18, 15, 22, 19, 25, 20])
+const weeklyQAData = ref([0, 0, 0, 0, 0, 0, 0])
+const weeklyTicketData = ref([0, 0, 0, 0, 0, 0, 0])
 
-const weekLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+const weekLabels = ref([])
 
 const knowledgeStats = ref({
-  total: 89,
-  views: 3256,
-  references: 876,
-  avgRating: 4,
+  total: 0,
+  views: 0,
+  references: 0,
+  avgRating: 0,
   status: {
-    published: 65,
-    pending: 18,
-    draft: 6
+    published: 0,
+    pending: 0,
+    draft: 0
   }
 })
 
 const staffStatus = ref({
-  total: 18,
-  active: 14,
-  onLeave: 3,
-  inactive: 1,
-  activePercent: 78,
-  leavePercent: 17
+  total: 0,
+  active: 0,
+  onLeave: 0,
+  inactive: 0,
+  activePercent: 0,
+  leavePercent: 0
 })
 
-const groupDistribution = ref([
-  { id: 'g1', name: '第一组', count: 6 },
-  { id: 'g2', name: '第二组', count: 6 },
-  { id: 'g3', name: '第三组', count: 6 }
-])
+const groupDistribution = ref([])
 
-const topPerformers = ref([
-  { name: '张伟', tickets: 45, resolved: 42, score: 98 },
-  { name: '李娜', tickets: 38, resolved: 35, score: 92 },
-  { name: '王强', tickets: 32, resolved: 29, score: 88 },
-  { name: '陈丽', tickets: 28, resolved: 25, score: 85 },
-  { name: '赵刚', tickets: 23, resolved: 20, score: 80 }
-])
+const topPerformers = ref([])
 
-const hotQuestions = ref([
-  { title: '系统登录失败', count: 156 },
-  { title: '数据库连接超时', count: 132 },
-  { title: '服务启动异常', count: 98 },
-  { title: '接口响应缓慢', count: 87 },
-  { title: '日志报错分析', count: 76 },
-  { title: '配置文件问题', count: 65 },
-  { title: '权限不足', count: 54 },
-  { title: '内存溢出', count: 43 },
-  { title: '磁盘空间不足', count: 32 },
-  { title: '网络不通', count: 28 }
-])
+const hotQuestions = ref([])
+
+const fetchDashboardState = async () => {
+  try {
+    const data = await dashboardApi.getState({
+      startDate: dateRange.value[0],
+      endDate: dateRange.value[1]
+    })
+    stats.value = {
+      totalConversations: data.totalConversations || 0,
+      totalTickets: data.totalTickets || 0,
+      documentCount: data.totalDocuments || 0,
+      onlineStaff: data.onlineStaff || 0,
+      qaResolveRate: data.qaResolveRate || 0,
+      solvedInQA: 0,
+      convertedToTicket: 0
+    }
+    if (data.ticketStatusDistribution) {
+      const dist = data.ticketStatusDistribution.reduce((acc, item) => {
+        const key = item.status === 'ASSIGNED' ? 'pending' :
+                     item.status === 'IN_PROGRESS' ? 'processing' :
+                     item.status === 'COMPLETED' ? 'resolved' :
+                     item.status === 'VECTOR_STORED' ? 'closed' : 'pending'
+        acc[key] = item.count || 0
+        return acc
+      }, { pending: 0, processing: 0, resolved: 0, closed: 0 })
+      ticketStatusDistribution.value = dist
+    }
+  } catch (error) {
+    console.error('Failed to fetch dashboard state:', error)
+  }
+}
+
+const fetchDashboardTrend = async () => {
+  try {
+    const data = await dashboardApi.getTrend({ period: activeTrendTab.value })
+    if (data.labels) {
+      weekLabels.value = data.labels
+    }
+    if (data.conversations) {
+      weeklyQAData.value = data.conversations
+    }
+    if (data.tickets) {
+      weeklyTicketData.value = data.tickets
+    }
+  } catch (error) {
+    console.error('Failed to fetch dashboard trend:', error)
+  }
+}
+
+const fetchHotQuestions = async () => {
+  try {
+    const data = await dashboardApi.getHotQuestions({ limit: 10 })
+    hotQuestions.value = data || []
+  } catch (error) {
+    console.error('Failed to fetch hot questions:', error)
+  }
+}
+
+const fetchGroups = async () => {
+  try {
+    const data = await groupApi.list()
+    groupDistribution.value = (data || []).map(g => ({
+      id: g.id,
+      name: g.name,
+      count: g.memberCount || g.members?.length || 0
+    }))
+  } catch (error) {
+    console.error('Failed to fetch groups:', error)
+  }
+}
+
+const fetchStaffList = async () => {
+  try {
+    const data = await staffApi.list({})
+    if (data && data.items) {
+      const staffList = data.items
+      staffStatus.value = {
+        total: staffList.length,
+        active: staffList.filter(s => s.status === 'ACTIVE').length,
+        onLeave: staffList.filter(s => s.status === 'ON_LEAVE').length,
+        inactive: staffList.filter(s => s.status === 'INACTIVE').length,
+        activePercent: Math.round(staffList.filter(s => s.status === 'ACTIVE').length / staffList.length * 100) || 0,
+        leavePercent: Math.round(staffList.filter(s => s.status === 'ON_LEAVE').length / staffList.length * 100) || 0
+      }
+      topPerformers.value = staffList.slice(0, 5).map(s => ({
+        name: s.name,
+        tickets: s.ticketCount || 0,
+        resolved: s.resolvedCount || 0,
+        score: s.score || 0
+      }))
+    }
+  } catch (error) {
+    console.error('Failed to fetch staff list:', error)
+  }
+}
+
+const loadAllData = async () => {
+  loading.value = true
+  try {
+    await Promise.all([
+      fetchDashboardState(),
+      fetchDashboardTrend(),
+      fetchHotQuestions(),
+      fetchGroups(),
+      fetchStaffList()
+    ])
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadAllData()
+})
 
 // QA趋势线计算
 const qaPoints = computed(() => {

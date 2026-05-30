@@ -251,12 +251,14 @@
   </div>
 </template>
 
-<script setup lang="ts">import { ref, computed } from 'vue';
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue';
 import Sidebar from '../components/Sidebar.vue';
 import TopHeader from '../components/TopHeader.vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { ArrowLeft, Search, Bell, Plus, Refresh, User, Edit, Delete, UsersFilled } from '@element-plus/icons-vue';
-// 值班人员接口定义
+import { scheduleApi, staffApi, groupApi } from '../services/api';
+
 interface Staff {
  id: string;
  name: string;
@@ -267,13 +269,13 @@ interface Staff {
  status: 'ACTIVE' | 'ON_LEAVE';
  joinedAt: Date;
 }
-// 分组接口定义
+
 interface Group {
  id: string;
  name: string;
  members: Staff[];
 }
-// 排班接口定义
+
 interface Schedule {
  id: string;
  groupId: string;
@@ -282,14 +284,14 @@ interface Schedule {
  endDate: Date;
  isActive: boolean;
 }
-// 周日期接口定义
+
 interface WeekDay {
  date: Date;
  day: number;
  monthYear: string;
  dayOfWeek: string;
 }
-// 响应式数据
+
 const showAddStaffModal = ref(false);
 const showAddGroupModal = ref(false);
 const editingStaff = ref(false);
@@ -303,118 +305,75 @@ const newStaff = ref<Partial<Staff>>({
 const newGroup = ref({
  name: ''
 });
-// 筛选条件
 const searchQuery = ref('');
-// 当前周的起始日期
 const currentWeekStart = ref(new Date());
-// 模拟值班人员数据
-const staffList = ref<Staff[]>([
- {
- id: 'staff-1',
- name: '张伟',
- email: 'zhangwei@example.com',
- phone: '13800138001',
- groupId: 'group-1',
- groupName: '第一组',
- status: 'ACTIVE',
- joinedAt: new Date(Date.now() - 86400000 * 30)
- },
- {
- id: 'staff-2',
- name: '李娜',
- email: 'lina@example.com',
- phone: '13800138002',
- groupId: 'group-1',
- groupName: '第一组',
- status: 'ACTIVE',
- joinedAt: new Date(Date.now() - 86400000 * 25)
- },
- {
- id: 'staff-3',
- name: '王强',
- email: 'wangqiang@example.com',
- phone: '13800138003',
- groupId: 'group-2',
- groupName: '第二组',
- status: 'ACTIVE',
- joinedAt: new Date(Date.now() - 86400000 * 20)
- },
- {
- id: 'staff-4',
- name: '陈丽',
- email: 'chenli@example.com',
- phone: '13800138004',
- groupId: 'group-2',
- groupName: '第二组',
- status: 'ACTIVE',
- joinedAt: new Date(Date.now() - 86400000 * 15)
- },
- {
- id: 'staff-5',
- name: '赵刚',
- email: 'zhaogang@example.com',
- phone: '13800138005',
- groupId: 'group-3',
- groupName: '第三组',
- status: 'ACTIVE',
- joinedAt: new Date(Date.now() - 86400000 * 10)
- },
- {
- id: 'staff-6',
- name: '刘敏',
- email: 'liumin@example.com',
- phone: '13800138006',
- groupId: 'group-3',
- groupName: '第三组',
- status: 'ON_LEAVE',
- joinedAt: new Date(Date.now() - 86400000 * 5)
- }
-]);
-// 模拟分组数据
-const groups = ref<Group[]>([
- {
- id: 'group-1',
- name: '第一组',
- members: []
- },
- {
- id: 'group-2',
- name: '第二组',
- members: []
- },
- {
- id: 'group-3',
- name: '第三组',
- members: []
- }
-]);
-// 模拟排班数据
-const schedules = ref<Schedule[]>([
- {
- id: 'sched-1',
- groupId: 'group-1',
- groupName: '第一组',
- startDate: new Date(Date.now() - 86400000 * 7),
- endDate: new Date(Date.now()),
- isActive: false
- },
- {
- id: 'sched-2',
- groupId: 'group-2',
- groupName: '第二组',
- startDate: new Date(Date.now()),
- endDate: new Date(Date.now() + 86400000 * 7),
- isActive: true
- },
- {
- id: 'sched-3',
- groupId: 'group-3',
- groupName: '第三组',
- startDate: new Date(Date.now() + 86400000 * 7),
- endDate: new Date(Date.now() + 86400000 * 14),
- isActive: false
- }
-]);
+const loading = ref(false);
+
+const staffList = ref<Staff[]>([]);
+const groups = ref<Group[]>([]);
+const schedules = ref<Schedule[]>([]);
+
+const fetchStaffList = async () => {
+  try {
+    const data = await staffApi.list({ search: searchQuery.value || undefined })
+    if (data && data.items) {
+      staffList.value = data.items.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        phone: s.phone || '',
+        groupId: s.groupId,
+        groupName: s.groupName,
+        status: s.status || 'ACTIVE',
+        joinedAt: new Date(s.joinedAt || Date.now())
+      }))
+    }
+  } catch (error) {
+    console.error('Failed to fetch staff list:', error)
+  }
+}
+
+const fetchGroups = async () => {
+  try {
+    const data = await groupApi.list()
+    groups.value = (data || []).map((g: any) => ({
+      id: g.id,
+      name: g.name,
+      members: g.members || []
+    }))
+  } catch (error) {
+    console.error('Failed to fetch groups:', error)
+  }
+}
+
+const fetchSchedules = async () => {
+  loading.value = true
+  try {
+    const startDate = weekDays.value[0]?.date?.toISOString().split('T')[0]
+    const endDate = weekDays.value[6]?.date?.toISOString().split('T')[0]
+    const data = await scheduleApi.list({ startDate, endDate })
+    if (data && data.items) {
+      schedules.value = data.items.map((s: any) => ({
+        id: s.id,
+        groupId: s.groupId,
+        groupName: s.groupName,
+        startDate: new Date(s.startDate),
+        endDate: new Date(s.endDate),
+        isActive: s.isActive || false
+      }))
+    }
+  } catch (error) {
+    console.error('Failed to fetch schedules:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchStaffList()
+  fetchGroups()
+  fetchSchedules()
+})
 // 计算属性：筛选后的值班人员
 const filteredStaff = computed(() => {
  return staffList.value.filter(staff => {
@@ -509,50 +468,54 @@ const editStaff = (staff: Staff) => {
  showAddStaffModal.value = true;
 };
 // 保存值班人员
-const saveStaff = () => {
+const saveStaff = async () => {
  if (!newStaff.value.name || !newStaff.value.email || !newStaff.value.phone) {
  ElMessage.warning('请填写完整信息');
  return;
  }
+ try {
  if (editingStaff.value) {
- const index = staffList.value.findIndex(s => s.id === newStaff.value.id);
- if (index !== -1) {
- staffList.value[index] = {
- ...newStaff.value,
- id: staffList.value[index].id,
- groupName: groups.value.find(g => g.id === newStaff.value.groupId)?.name || null,
- joinedAt: staffList.value[index].joinedAt
- } as Staff;
+ await staffApi.update(newStaff.value.id!, {
+ name: newStaff.value.name,
+ email: newStaff.value.email,
+ phone: newStaff.value.phone,
+ groupId: newStaff.value.groupId,
+ status: newStaff.value.status
+ })
+ } else {
+ await staffApi.create({
+ name: newStaff.value.name,
+ email: newStaff.value.email,
+ phone: newStaff.value.phone,
+ groupId: newStaff.value.groupId,
+ status: newStaff.value.status
+ })
  }
- }
- else {
- const newId = `staff-${Date.now()}`;
- staffList.value.push({
- id: newId,
- name: newStaff.value.name!,
- email: newStaff.value.email!,
- phone: newStaff.value.phone!,
- groupId: newStaff.value.groupId || null,
- groupName: newStaff.value.groupId ? groups.value.find(g => g.id === newStaff.value.groupId)?.name || null : null,
- status: newStaff.value.status as 'ACTIVE' | 'ON_LEAVE' | 'INACTIVE',
- joinedAt: new Date()
- });
+ await fetchStaffList()
+ await fetchGroups()
+ ElMessage.success('保存成功');
+ } catch (error) {
+ ElMessage.error('保存失败');
  }
  closeAddStaffModal();
- ElMessage.success('保存成功');
 };
+
 // 删除值班人员
-const deleteStaff = (id: string) => {
- ElMessageBox.confirm('确定要删除这个值班人员吗？', '提示', {
+const deleteStaff = async (id: string) => {
+ try {
+ await ElMessageBox.confirm('确定要删除这个值班人员吗？', '提示', {
  confirmButtonText: '确定',
  cancelButtonText: '取消',
  type: 'warning'
- }).then(() => {
- staffList.value = staffList.value.filter(staff => staff.id !== id);
+ })
+ await staffApi.delete(id)
+ await fetchStaffList()
  ElMessage.success('删除成功');
- }).catch(() => {
- ElMessage.info('已取消删除');
- });
+ } catch (error) {
+ if (error !== 'cancel') {
+ ElMessage.error('删除失败');
+ }
+ }
 };
 // 关闭添加值班人员模态框
 const closeAddStaffModal = () => {
@@ -572,24 +535,19 @@ const openAddGroupModal = () => {
  showAddGroupModal.value = true;
 };
 // 保存分组
-const saveGroup = () => {
+const saveGroup = async () => {
  if (!newGroup.value.name) {
  ElMessage.warning('请输入组别名称');
  return;
  }
- const existingGroup = groups.value.find(g => g.name === newGroup.value.name);
- if (existingGroup) {
- ElMessage.warning('组别名称已存在');
- return;
- }
- const newId = `group-${Date.now()}`;
- groups.value.push({
- id: newId,
- name: newGroup.value.name,
- members: []
- });
- closeAddGroupModal();
+ try {
+ await groupApi.create({ name: newGroup.value.name })
+ await fetchGroups()
  ElMessage.success('添加成功');
+ } catch (error) {
+ ElMessage.error('添加失败');
+ }
+ closeAddGroupModal();
 };
 // 关闭添加分组模态框
 const closeAddGroupModal = () => {

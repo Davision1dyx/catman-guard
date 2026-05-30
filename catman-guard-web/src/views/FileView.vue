@@ -210,9 +210,10 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import Sidebar from '../components/Sidebar.vue'
-import axios from 'axios'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { fileApi } from '../services/api'
 
 const searchQuery = ref('')
 const fileTypeFilter = ref('')
@@ -222,82 +223,80 @@ const splitDialogVisible = ref(false)
 const currentFile = ref(null)
 const selectedFile = ref(null)
 const fileInput = ref(null)
+const loading = ref(false)
 
 const uploadForm = reactive({
   title: '',
   description: ''
 })
 
-const fileList = ref([
-  {
-    id: '1',
-    name: '运维手册v2.0.pdf',
-    type: 'PDF',
-    size: '2.5 MB',
-    uploadTime: '2026-05-05 10:30',
-    status: '已处理'
-  },
-  {
-    id: '2',
-    name: '系统配置指南.docx',
-    type: 'Word',
-    size: '1.2 MB',
-    uploadTime: '2026-05-04 15:20',
-    status: '已处理'
-  },
-  {
-    id: '3',
-    name: '故障排查记录.xlsx',
-    type: 'Excel',
-    size: '856 KB',
-    uploadTime: '2026-05-03 09:15',
-    status: '已处理'
-  },
-  {
-    id: '4',
-    name: 'API接口文档.md',
-    type: 'Markdown',
-    size: '128 KB',
-    uploadTime: '2026-05-02 14:40',
-    status: '处理中'
-  },
-  {
-    id: '5',
-    name: '日志分析报告.txt',
-    type: '文本',
-    size: '45 KB',
-    uploadTime: '2026-05-01 11:00',
-    status: '已处理'
-  },
-  {
-    id: '6',
-    name: '数据库设计文档.pdf',
-    type: 'PDF',
-    size: '3.8 MB',
-    uploadTime: '2026-04-30 16:30',
-    status: '已处理'
+const fileList = ref([])
+
+const splits = ref([])
+
+const fetchFiles = async () => {
+  loading.value = true
+  try {
+    const data = await fileApi.listAll({})
+    fileList.value = (data || []).map((f: any) => ({
+      id: f.id,
+      name: f.title || f.originalName || '未知文件',
+      type: f.type || getFileType(f.originalName || ''),
+      size: f.size ? formatSize(f.size) : '0 KB',
+      sizeBytes: f.size || 0,
+      uploadTime: f.uploadTime ? new Date(f.uploadTime).toLocaleString('zh-CN') : new Date().toLocaleString('zh-CN'),
+      status: getStatusText(f.status),
+      statusRaw: f.status
+    }))
+  } catch (error) {
+    console.error('Failed to fetch files:', error)
+  } finally {
+    loading.value = false
   }
-])
+}
 
-const splits = ref([
-  { content: '系统运维手册第1章：概述...', tokens: 150 },
-  { content: '系统运维手册第2章：环境配置...', tokens: 180 },
-  { content: '系统运维手册第3章：故障排查...', tokens: 200 }
-])
+const getFileType = (filename) => {
+  const ext = filename.split('.').pop()?.toUpperCase() || ''
+  const typeMap: Record<string, string> = {
+    'PDF': 'PDF',
+    'DOC': 'Word', 'DOCX': 'Word',
+    'XLS': 'Excel', 'XLSX': 'Excel',
+    'MD': 'Markdown', 'MARKDOWN': 'Markdown',
+    'TXT': '文本'
+  }
+  return typeMap[ext] || '文本'
+}
 
-const processedCount = computed(() => 
-  fileList.value.filter(f => f.status === '已处理').length
+const getStatusText = (status) => {
+  const statusMap: Record<string, string> = {
+    'INIT': '待处理',
+    'UPLOADED': '待处理',
+    'CONVERTING': '处理中',
+    'CONVERTED': '已处理',
+    'CHUNKED': '已处理',
+    'VECTOR_STORED': '已处理',
+    'FAILED': '失败'
+  }
+  return statusMap[status] || '待处理'
+}
+
+onMounted(() => {
+  fetchFiles()
+})
+
+const processedCount = computed(() =>
+  fileList.value.filter(f => f.statusRaw === 'CONVERTED' || f.statusRaw === 'CHUNKED' || f.statusRaw === 'VECTOR_STORED').length
 )
 
-const processingCount = computed(() => 
-  fileList.value.filter(f => f.status === '处理中').length
+const processingCount = computed(() =>
+  fileList.value.filter(f => f.statusRaw === 'CONVERTING' || f.statusRaw === 'UPLOADED').length
 )
 
 const filteredFiles = computed(() => {
   return fileList.value.filter(file => {
-    const matchSearch = !searchQuery.value || 
+    const matchSearch = !searchQuery.value ||
       file.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchType = !fileTypeFilter.value || 
+    const matchType = !fileTypeFilter.value ||
       file.type.toLowerCase().includes(fileTypeFilter.value.toLowerCase())
     const matchStatus = !statusFilter.value || file.status === statusFilter.value
     return matchSearch && matchType && matchStatus
@@ -305,7 +304,7 @@ const filteredFiles = computed(() => {
 })
 
 const getFileIcon = (type) => {
-  const icons = {
+  const icons: Record<string, string> = {
     'PDF': '📕',
     'Word': '📘',
     'Excel': '📗',
@@ -316,7 +315,7 @@ const getFileIcon = (type) => {
 }
 
 const getStatusType = (status) => {
-  const types = {
+  const types: Record<string, string> = {
     '已处理': 'success',
     '处理中': 'warning',
     '待处理': 'info',
@@ -347,20 +346,10 @@ const submitUpload = async () => {
     formData.append('file', selectedFile.value)
     formData.append('title', uploadForm.title)
     formData.append('description', uploadForm.description)
-    
-    await axios.get('/processing/catman/storage/file/upload', {
-      params: formData
-    })
-    
-    fileList.value.unshift({
-      id: Date.now().toString(),
-      name: uploadForm.title + '.' + selectedFile.value.name.split('.').pop(),
-      type: selectedFile.value.name.split('.').pop().toUpperCase(),
-      size: formatSize(selectedFile.value.size),
-      uploadTime: new Date().toLocaleString('zh-CN'),
-      status: '处理中'
-    })
-    
+
+    await fileApi.upload(formData)
+    await fetchFiles()
+
     uploadDialogVisible.value = false
     uploadForm.title = ''
     uploadForm.description = ''
@@ -368,7 +357,7 @@ const submitUpload = async () => {
     if (fileInput.value) {
       fileInput.value.value = ''
     }
-    
+
     ElMessage.success('上传成功')
   } catch (error) {
     ElMessage.error('上传失败')
@@ -376,6 +365,7 @@ const submitUpload = async () => {
 }
 
 const formatSize = (bytes) => {
+  if (!bytes) return '0 KB'
   if (bytes < 1024) return bytes + ' B'
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
@@ -388,31 +378,36 @@ const viewFile = (file) => {
 const viewSplit = async (file) => {
   currentFile.value = file
   try {
-    const response = await axios.get('/processing/catman/storage/file/querySplit', {
-      params: { fileId: file.id }
-    })
-    splits.value = response.data || splits.value
+    const data = await fileApi.getChunks(file.id)
+    splits.value = (data || []).map((s: any) => ({
+      content: s.content || '',
+      tokens: s.tokens || s.size || 0
+    }))
   } catch (error) {
-    console.log('使用模拟数据')
+    console.error('Failed to fetch splits:', error)
   }
   splitDialogVisible.value = true
 }
 
-const deleteFile = (file) => {
-  ElMessageBox.confirm(
-    '确定要删除该文件吗？',
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    fileList.value = fileList.value.filter(f => f.id !== file.id)
+const deleteFile = async (file) => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除该文件吗？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    await fileApi.delete(file.id)
+    await fetchFiles()
     ElMessage.success('删除成功')
-  }).catch(() => {
-    ElMessage.info('已取消删除')
-  })
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败')
+    }
+  }
 }
 </script>
 

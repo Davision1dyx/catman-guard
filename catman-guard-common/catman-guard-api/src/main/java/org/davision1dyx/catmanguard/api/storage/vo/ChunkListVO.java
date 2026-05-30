@@ -32,12 +32,14 @@ public class ChunkListVO {
         private String chunkId;
         private String content;
         private Integer chunkIndex;
+        private String metadata;
         private Long size;
 
-        public static ChunkItemVO build(String chunkId, String content, Integer chunkIndex, Long size) {
+        public static ChunkItemVO build(String chunkId, String content, String metadata, Integer chunkIndex, Long size) {
             ChunkItemVO item = new ChunkItemVO();
             item.setChunkId(chunkId);
             item.setContent(content);
+            item.setMetadata(metadata);
             item.setChunkIndex(chunkIndex);
             item.setSize(size);
             return item;

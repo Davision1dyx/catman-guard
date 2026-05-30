@@ -287,6 +287,31 @@
 
     <el-dialog v-model="showVisualizationDialog" :title="`分片可视化 - ${selectedFileForChunk?.title}`" width="1000px">
       <div class="visualization-content">
+        <div class="color-legend">
+          <h4>颜色图例</h4>
+          <div class="legend-items">
+            <div class="legend-item">
+              <span class="legend-color bg-blue-100"></span>
+              <span class="legend-text">分片1</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color bg-green-100"></span>
+              <span class="legend-text">分片2</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color bg-purple-100"></span>
+              <span class="legend-text">分片3</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color bg-pink-100"></span>
+              <span class="legend-text">分片4</span>
+            </div>
+            <div class="legend-item overlap">
+              <span class="legend-color bg-yellow-300"></span>
+              <span class="legend-text">重叠部分</span>
+            </div>
+          </div>
+        </div>
         <div class="original-content">
           <h4>原文档内容</h4>
           <div class="content-box" v-html="highlightedContent"></div>
@@ -308,11 +333,12 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import Sidebar from '../components/Sidebar.vue'
 import TopHeader from '../components/TopHeader.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
+import { Search, Document, Edit, Delete, DocumentCopy, Share, Plus, Upload, Refresh, Download, List, View, Scissor, FolderOpened } from '@element-plus/icons-vue'
+import { knowledgeApi, fileApi } from '../services/api'
 
 const searchQuery = ref('')
 const showCreateKBDialog = ref(false)
@@ -325,6 +351,7 @@ const currentKBId = ref(null)
 const selectedFile = ref(null)
 const selectedFileForChunk = ref(null)
 const fileInputRef = ref(null)
+const loading = ref(false)
 
 const kbForm = reactive({
   name: '',
@@ -345,130 +372,67 @@ const chunkForm = reactive({
   childLength: 200
 })
 
-const knowledgeBases = ref([
-  {
-    id: 'kb-1',
-    name: 'API 网关文档',
-    description: '包含API网关的配置指南、使用说明和最佳实践',
-    type: 'technical',
-    fileCount: 12,
-    chunkCount: 145,
-    status: 'ACTIVE',
-    createdAt: new Date(Date.now() - 86400000 * 30),
-    updatedAt: new Date()
-  },
-  {
-    id: 'kb-2',
-    name: '数据库运维手册',
-    description: '数据库性能优化、备份恢复、故障排查等相关文档',
-    type: 'operation',
-    fileCount: 8,
-    chunkCount: 98,
-    status: 'ACTIVE',
-    createdAt: new Date(Date.now() - 86400000 * 45),
-    updatedAt: new Date(Date.now() - 86400000 * 5)
-  },
-  {
-    id: 'kb-3',
-    name: '用户服务规范',
-    description: '用户管理服务的开发规范和接口文档',
-    type: 'technical',
-    fileCount: 5,
-    chunkCount: 67,
-    status: 'MAINTENANCE',
-    createdAt: new Date(Date.now() - 86400000 * 20),
-    updatedAt: new Date(Date.now() - 86400000 * 10)
-  },
-  {
-    id: 'kb-4',
-    name: '产品功能说明',
-    description: '产品各功能模块的详细说明和用户手册',
-    type: 'product',
-    fileCount: 15,
-    chunkCount: 210,
-    status: 'ACTIVE',
-    createdAt: new Date(Date.now() - 86400000 * 60),
-    updatedAt: new Date()
-  }
-])
+const knowledgeBases = ref([])
+const files = ref([])
 
-const files = ref([
-  {
-    id: '1',
-    knowledgeBaseId: 'kb-1',
-    title: 'API Gateway 配置指南',
-    originalName: 'api_gateway_config_guide.pdf',
-    softwareVersion: 'v2.3.1',
-    feature: '认证授权',
-    microservice: 'auth-service',
-    status: 'CHUNKED',
-    size: 2048576,
-    uploadTime: new Date(Date.now() - 86400000),
-    chunks: [
-      { id: 'chunk-1-1', content: 'API Gateway 是微服务架构中的关键组件，负责请求路由、认证授权、限流等功能。它作为系统的入口点，对外提供统一的API接口，内部则根据路由规则将请求转发到相应的微服务。', size: 1024 },
-      { id: 'chunk-1-2', content: '配置 API Gateway 的第一步是设置路由规则，指定目标服务的地址和路径。路由规则通常包括路径匹配、方法限制、参数校验等配置项。此外，还需要配置负载均衡策略，以便在多个实例间分配请求流量。', size: 950 },
-      { id: 'chunk-1-3', content: '认证授权功能通过 JWT Token 实现，客户端需要在请求头中携带有效的 token。API Gateway 会验证 token 的有效性，并解析其中的用户身份信息。根据用户的权限级别，决定是否允许访问特定的资源或执行特定的操作。', size: 1100 }
-    ]
-  },
-  {
-    id: '2',
-    knowledgeBaseId: 'kb-2',
-    title: '数据库性能优化手册',
-    originalName: 'db_performance_optimization.docx',
-    softwareVersion: 'v1.8.5',
-    feature: '性能调优',
-    microservice: 'data-service',
-    status: 'CONVERTED',
-    size: 3145728,
-    uploadTime: new Date(Date.now() - 172800000),
-    chunks: []
-  },
-  {
-    id: '3',
-    knowledgeBaseId: 'kb-3',
-    title: '用户服务开发规范',
-    originalName: 'user_service_dev_guidelines.md',
-    softwareVersion: 'v3.1.2',
-    feature: '用户管理',
-    microservice: 'user-service',
-    status: 'UPLOADED',
-    size: 1048576,
-    uploadTime: new Date(Date.now() - 259200000),
-    chunks: []
-  },
-  {
-    id: '4',
-    knowledgeBaseId: 'kb-1',
-    title: '支付模块安全说明',
-    originalName: 'payment_module_security.pdf',
-    softwareVersion: 'v4.0.0',
-    feature: '支付功能',
-    microservice: 'payment-service',
-    status: 'VECTOR_STORED',
-    size: 1572864,
-    uploadTime: new Date(Date.now() - 345600000),
-    chunks: [
-      { id: 'chunk-4-1', content: '支付模块的安全性至关重要，需要实施多层次的安全防护措施。这包括数据传输加密、敏感信息脱敏、交易风险监控等多个方面。', size: 1200 },
-      { id: 'chunk-4-2', content: '敏感信息加密是支付模块的基础安全要求，所有交易数据必须经过加密处理。采用行业标准的加密算法，如 AES-256，确保即使数据被截获也无法轻易解密。', size: 1150 }
-    ]
-  },
-  {
-    id: '5',
-    knowledgeBaseId: 'kb-4',
-    title: '产品功能介绍',
-    originalName: 'product_features_overview.docx',
-    softwareVersion: 'v5.2.0',
-    feature: '核心功能',
-    microservice: 'product-service',
-    status: 'CHUNKED',
-    size: 2621440,
-    uploadTime: new Date(Date.now() - 432000000),
-    chunks: [
-      { id: 'chunk-5-1', content: '本产品提供全面的功能模块，包括用户管理、数据处理、报表分析等核心功能。通过高效的架构设计，确保系统的稳定性和可扩展性。', size: 980 },
-      { id: 'chunk-5-2', content: '用户管理模块支持角色权限控制，可以根据不同用户的角色分配相应的功能权限。系统还提供了审计日志功能，记录关键操作，便于追踪和审查。', size: 1050 }
-    ]
+const fetchKnowledgeBases = async () => {
+  try {
+    const response = await knowledgeApi.list({})
+    const data = response.data || response || []
+    console.log('API返回的原始数据:', data)
+    console.log('数据类型:', typeof data, Array.isArray(data))
+    knowledgeBases.value = (data || []).map((kb) => ({
+      id: kb.knowledgeId,
+      name: kb.name,
+      description: kb.description,
+      type: kb.type,
+      fileCount: kb.fileCount || 0,
+      chunkCount: kb.chunkCount || 0,
+      status: 'ACTIVE',
+      createdAt: kb.createdTime ? new Date(kb.createdTime) : new Date(),
+      updatedAt: kb.updatedTime ? new Date(kb.updatedTime) : new Date()
+    }))
+    console.log('处理后的knowledgeBases:', knowledgeBases.value)
+    console.log('fileCount值:', knowledgeBases.value.map(kb => ({ name: kb.name, fileCount: kb.fileCount, chunkCount: kb.chunkCount })))
+  } catch (error) {
+    console.error('Failed to fetch knowledge bases:', error)
   }
-])
+}
+
+const fetchFiles = async () => {
+  if (!currentKBId.value) return
+  loading.value = true
+  try {
+    const response = await fileApi.list(currentKBId.value, {})
+    const data = response.data || response || []
+    files.value = (data || []).map((f) => ({
+      id: f.fileId,
+      knowledgeBaseId: f.knowledgeId || currentKBId.value,
+      title: f.fileTitle,
+      originalName: f.fileName,
+      softwareVersion: f.version || '',
+      feature: f.feature || '',
+      microservice: f.microservice || '',
+      status: f.status || 'UPLOADED',
+      size: f.size || 0,
+      uploadTime: f.createTime ? new Date(f.createTime) : new Date(),
+      chunks: []
+    }))
+  } catch (error) {
+    console.error('Failed to fetch files:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const switchKB = async (id) => {
+  currentKBId.value = id
+  await fetchFiles()
+}
+
+onMounted(() => {
+  fetchKnowledgeBases()
+})
 
 const fileTypeFilter = ref('')
 const statusFilter = ref('')
@@ -506,63 +470,83 @@ const highlightedContent = computed(() => {
     return ''
   }
 
-  let originalContent = ''
-  selectedFileForChunk.value.chunks.forEach(chunk => {
-    originalContent += chunk.content + ' '
-  })
+  const chunks = selectedFileForChunk.value.chunks
+  const colors = ['bg-blue-100', 'bg-green-100', 'bg-purple-100', 'bg-pink-100', 'bg-indigo-100', 'bg-red-100', 'bg-teal-100']
 
-  const charMap = new Array(originalContent.length).fill(-1)
-  const overlapMap = new Array(originalContent.length).fill(false)
+  let mergedText = ''
+  const chunkAssignments = []
+  const overlapFlags = []
 
-  let pos = 0
-  selectedFileForChunk.value.chunks.forEach((chunk, chunkIndex) => {
-    const chunkText = chunk.content
-    const chunkStart = originalContent.indexOf(chunkText, pos)
+  for (let i = 0; i < chunks.length; i++) {
+    const content = chunks[i].content
     
-    if (chunkStart !== -1) {
-      for (let i = chunkStart; i < chunkStart + chunkText.length; i++) {
-        if (charMap[i] !== -1) {
-          overlapMap[i] = true
-        }
-        charMap[i] = chunkIndex
+    let maxOverlap = 0
+    for (let len = Math.min(content.length, mergedText.length); len > 0; len--) {
+      const suffix = content.substring(0, len)
+      if (mergedText.endsWith(suffix)) {
+        maxOverlap = len
+        break
       }
-      pos = chunkStart + chunkText.length
     }
-  })
+
+    const newContent = content.substring(maxOverlap)
+    
+    if (maxOverlap > 0) {
+      const startIdx = mergedText.length - maxOverlap
+      for (let j = startIdx; j < mergedText.length; j++) {
+        overlapFlags[j] = true
+      }
+    }
+
+    for (let j = 0; j < newContent.length; j++) {
+      chunkAssignments.push(i)
+      overlapFlags.push(false)
+    }
+
+    mergedText += newContent
+  }
 
   let result = ''
   let currentChunkIndex = -1
-  
-  for (let i = 0; i < originalContent.length; i++) {
-    const char = originalContent[i]
-    
-    if (charMap[i] !== currentChunkIndex) {
+  let inOverlap = false
+
+  for (let i = 0; i < mergedText.length; i++) {
+    const char = mergedText[i]
+    const isOverlap = overlapFlags[i]
+    const chunkIdx = chunkAssignments[i]
+
+    if (isOverlap && !inOverlap) {
       if (currentChunkIndex !== -1) {
         result += '</span>'
       }
-      
-      if (charMap[i] !== -1) {
-        if (overlapMap[i]) {
-          result += `<span class="bg-yellow-300">${char}`
-        } else {
-          const colors = ['bg-blue-100', 'bg-green-100', 'bg-purple-100', 'bg-pink-100', 'bg-indigo-100', 'bg-red-100', 'bg-teal-100']
-          const color = colors[charMap[i] % colors.length]
-          result += `<span class="${color}">${char}`
-        }
-      } else {
-        result += char
+      result += `<span class="bg-yellow-300">${char}`
+      inOverlap = true
+      currentChunkIndex = -1
+    } else if (isOverlap && inOverlap) {
+      result += char
+    } else if (!isOverlap && chunkIdx !== currentChunkIndex) {
+      if (inOverlap) {
+        result += '</span>'
+        inOverlap = false
       }
-      
-      currentChunkIndex = charMap[i]
+      if (currentChunkIndex !== -1) {
+        result += '</span>'
+      }
+      const color = colors[chunkIdx % colors.length]
+      result += `<span class="${color}">${char}`
+      currentChunkIndex = chunkIdx
     } else {
       result += char
     }
   }
-  
+
   if (currentChunkIndex !== -1) {
     result += '</span>'
   }
-  
+  if (inOverlap) {
+    result += '</span>'
+  }
+
   return result
 })
 
@@ -634,15 +618,15 @@ const getFileStatusType = (status) => {
 }
 
 const canViewChunks = (file) => {
-  return file.status === 'CHUNKED' || file.status === 'VECTOR_STORED'
+  if (!file || !file.status) return false
+  const status = file.status.toUpperCase()
+  return status === 'CHUNKED' || status === 'VECTOR_STORED'
 }
 
 const canChunk = (file) => {
-  return file.status === 'CONVERTED' || file.status === 'UPLOADED'
-}
-
-const switchKB = (id) => {
-  currentKBId.value = id
+  if (!file || !file.status) return false
+  const status = file.status.toUpperCase()
+  return status === 'CONVERTED' || status === 'UPLOADED'
 }
 
 const editKB = (kb) => {
@@ -653,43 +637,46 @@ const editKB = (kb) => {
   showCreateKBDialog.value = true
 }
 
-const deleteKB = (kb) => {
-  ElMessageBox.confirm(`确定要删除知识库 "${kb.name}" 吗？此操作将删除该知识库下的所有文件，此操作不可恢复。`, '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    knowledgeBases.value = knowledgeBases.value.filter(k => k.id !== kb.id)
-    files.value = files.value.filter(f => f.knowledgeBaseId !== kb.id)
+const deleteKB = async (kb) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除知识库 "${kb.name}" 吗？此操作将删除该知识库下的所有文件，此操作不可恢复。`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await knowledgeApi.delete(kb.id)
+    await fetchKnowledgeBases()
     if (currentKBId.value === kb.id) {
       currentKBId.value = knowledgeBases.value.length > 0 ? knowledgeBases.value[0].id : null
     }
+    if (currentKBId.value) await fetchFiles()
     ElMessage.success('删除成功')
-  }).catch(() => {})
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败')
+    }
+  }
 }
 
-const saveKB = () => {
-  if (editingKB.value) {
-    const index = knowledgeBases.value.findIndex(k => k.id === editingKB.value.id)
-    if (index !== -1) {
-      knowledgeBases.value[index] = { 
-        ...knowledgeBases.value[index], 
-        ...kbForm,
-        updatedAt: new Date()
-      }
+const saveKB = async () => {
+  try {
+    if (editingKB.value) {
+      await knowledgeApi.update(editingKB.value.id, {
+        name: kbForm.name,
+        description: kbForm.description,
+        type: kbForm.type
+      })
+    } else {
+      await knowledgeApi.create({
+        name: kbForm.name,
+        description: kbForm.description,
+        type: kbForm.type
+      })
     }
-    ElMessage.success('修改成功')
-  } else {
-    knowledgeBases.value.push({
-      id: `kb-${Date.now()}`,
-      ...kbForm,
-      status: 'ACTIVE',
-      fileCount: 0,
-      chunkCount: 0,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    })
-    ElMessage.success('创建成功')
+    await fetchKnowledgeBases()
+    ElMessage.success(editingKB.value ? '修改成功' : '创建成功')
+  } catch (error) {
+    ElMessage.error(editingKB.value ? '修改失败' : '创建失败')
   }
   showCreateKBDialog.value = false
   editingKB.value = null
@@ -713,24 +700,23 @@ const handleFileSelect = (event) => {
 const submitUpload = async () => {
   if (!selectedFile.value || !currentKBId.value) return
 
-  const newFileItem = {
-    id: `file-${Date.now()}`,
-    knowledgeBaseId: currentKBId.value,
-    title: uploadForm.title,
-    originalName: selectedFile.value.name,
-    softwareVersion: uploadForm.softwareVersion,
-    feature: uploadForm.feature,
-    microservice: uploadForm.microservice,
-    status: 'UPLOADED',
-    size: selectedFile.value.size,
-    uploadTime: new Date(),
-    chunks: []
+  try {
+    const formData = new FormData()
+    formData.append('file', selectedFile.value)
+    formData.append('knowledgeId', currentKBId.value)
+    formData.append('title', uploadForm.title)
+    formData.append('softwareVersion', uploadForm.softwareVersion)
+    formData.append('feature', uploadForm.feature)
+    formData.append('microservice', uploadForm.microservice)
+
+    await fileApi.upload(formData)
+    await fetchFiles()
+    await fetchKnowledgeBases()
+
+    ElMessage.success('上传成功')
+  } catch (error) {
+    ElMessage.error('上传失败')
   }
-
-  files.value.unshift(newFileItem)
-
-  const kb = knowledgeBases.value.find(k => k.id === currentKBId.value)
-  if (kb) kb.fileCount++
 
   showUploadDialog.value = false
   uploadForm.title = ''
@@ -739,8 +725,6 @@ const submitUpload = async () => {
   uploadForm.microservice = ''
   selectedFile.value = null
   if (fileInputRef.value) fileInputRef.value.value = ''
-
-  ElMessage.success('上传成功')
 }
 
 const formatSize = (bytes) => {
@@ -769,49 +753,70 @@ const downloadFile = (file) => {
   ElMessage.success('文件已下载')
 }
 
-const viewChunks = (file) => {
+const viewChunks = async (file) => {
   if (!canViewChunks(file)) return
-  
+
   selectedFileForChunk.value = file
-  
-  if (file.chunks && file.chunks.length > 0) {
-    const sizes = file.chunks.map(c => c.size)
-    const totalSize = sizes.reduce((sum, size) => sum + size, 0)
-    
-    chunkDetails.chunks = file.chunks
-    chunkDetails.maxChunkSize = Math.max(...sizes)
-    chunkDetails.minChunkSize = Math.min(...sizes)
-    chunkDetails.avgChunkSize = Math.round(totalSize / sizes.length)
-  } else {
+
+  try {
+    const response = await fileApi.listChunks(file.id)
+    const data = response.data || response
+    if (data.chunks && data.chunks.length > 0) {
+      chunkDetails.chunks = data.chunks.map(c => ({
+        id: c.chunkId,
+        content: c.content,
+        size: c.size
+      }))
+      chunkDetails.maxChunkSize = data.maxChunkSize
+      chunkDetails.minChunkSize = data.minChunkSize
+      chunkDetails.avgChunkSize = data.avgChunkSize
+    } else {
+      chunkDetails.chunks = []
+      chunkDetails.maxChunkSize = 0
+      chunkDetails.minChunkSize = 0
+      chunkDetails.avgChunkSize = 0
+    }
+  } catch (error) {
+    ElMessage.error('获取分片信息失败')
     chunkDetails.chunks = []
-    chunkDetails.maxChunkSize = 0
-    chunkDetails.minChunkSize = 0
-    chunkDetails.avgChunkSize = 0
   }
-  
+
   showChunkDetailDialog.value = true
 }
 
-const openVisualization = (file) => {
+const openVisualization = async (file) => {
   if (!canViewChunks(file)) return
-  
+
   selectedFileForChunk.value = file
-  
-  if (file.chunks && file.chunks.length > 0) {
-    const sizes = file.chunks.map(c => c.size)
-    const totalSize = sizes.reduce((sum, size) => sum + size, 0)
-    
-    chunkDetails.chunks = file.chunks
-    chunkDetails.maxChunkSize = Math.max(...sizes)
-    chunkDetails.minChunkSize = Math.min(...sizes)
-    chunkDetails.avgChunkSize = Math.round(totalSize / sizes.length)
-  } else {
+
+  try {
+    const response = await fileApi.listChunks(file.id)
+    const data = response.data || response
+    if (data && data.chunks && data.chunks.length > 0) {
+      const mappedChunks = data.chunks.map(c => ({
+        id: c.chunkId,
+        content: c.content,
+        size: c.size
+      }))
+      chunkDetails.chunks = mappedChunks
+      selectedFileForChunk.value.chunks = mappedChunks
+      chunkDetails.maxChunkSize = data.maxChunkSize || 0
+      chunkDetails.minChunkSize = data.minChunkSize || 0
+      chunkDetails.avgChunkSize = data.avgChunkSize || 0
+    } else {
+      chunkDetails.chunks = []
+      selectedFileForChunk.value.chunks = []
+      chunkDetails.maxChunkSize = 0
+      chunkDetails.minChunkSize = 0
+      chunkDetails.avgChunkSize = 0
+    }
+  } catch (error) {
+    console.error('获取分片信息失败:', error)
+    ElMessage.error('获取分片信息失败')
     chunkDetails.chunks = []
-    chunkDetails.maxChunkSize = 0
-    chunkDetails.minChunkSize = 0
-    chunkDetails.avgChunkSize = 0
+    selectedFileForChunk.value.chunks = []
   }
-  
+
   showVisualizationDialog.value = true
 }
 
@@ -822,37 +827,23 @@ const openChunkModal = (file) => {
   showChunkDialog.value = true
 }
 
-const performChunking = () => {
+const performChunking = async () => {
   if (!selectedFileForChunk.value) return
-  
-  setTimeout(() => {
-    const fileIndex = files.value.findIndex(f => f.id === selectedFileForChunk.value?.id)
-    if (fileIndex !== -1) {
-      files.value[fileIndex].status = 'CHUNKED'
-      
-      const mockChunks = []
-      const contentBase = '这是分片内容的示例，包含有关该文档主题的关键信息。分片处理有助于提高检索效率和准确性。'
-      
-      for (let i = 0; i < 5; i++) {
-        mockChunks.push({
-          id: `chunk-${selectedFileForChunk.value?.id}-${i + 1}`,
-          content: `${contentBase} 第 ${i + 1} 部分，用于演示分片效果。`,
-          size: Math.floor(Math.random() * 500) + 500
-        })
-      }
-      
-      files.value[fileIndex].chunks = mockChunks
-      selectedFileForChunk.value = files.value[fileIndex]
-      
-      const kbIndex = knowledgeBases.value.findIndex(kb => kb.id === files.value[fileIndex].knowledgeBaseId)
-      if (kbIndex !== -1) {
-        knowledgeBases.value[kbIndex].chunkCount += mockChunks.length
-      }
-    }
-    
-    showChunkDialog.value = false
-    ElMessage.success('分片完成')
-  }, 1500)
+
+  try {
+    await fileApi.chunk(selectedFileForChunk.value.id, {
+      chunkType: chunkForm.mode,
+      chunkSize: chunkForm.length,
+      chunkOverlap: chunkForm.childLength
+    })
+    await fetchFiles()
+    await fetchKnowledgeBases()
+    ElMessage.success('分片任务已提交')
+  } catch (error) {
+    ElMessage.error('分片失败')
+  }
+
+  showChunkDialog.value = false
 }
 
 const viewChunkDetail = (chunk) => {
@@ -867,23 +858,22 @@ const copyChunk = (chunk) => {
   })
 }
 
-const deleteFile = (file) => {
-  ElMessageBox.confirm(`确定要删除文件 "${file.title}" 吗？此操作不可恢复。`, '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    const kbIndex = knowledgeBases.value.findIndex(kb => kb.id === file.knowledgeBaseId)
-    if (kbIndex !== -1) {
-      knowledgeBases.value[kbIndex].fileCount -= 1
-      if (file.status === 'CHUNKED' || file.status === 'VECTOR_STORED') {
-        knowledgeBases.value[kbIndex].chunkCount -= file.chunks?.length ?? 0
-      }
-    }
-    
-    files.value = files.value.filter(f => f.id !== file.id)
+const deleteFile = async (file) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除文件 "${file.title}" 吗？此操作不可恢复。`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await fileApi.delete(file.id)
+    await fetchFiles()
+    await fetchKnowledgeBases()
     ElMessage.success('删除成功')
-  }).catch(() => {})
+  } catch (error) {
+    if (error !== 'cancel' && !(error && error.type === 'cancel')) {
+      ElMessage.error('删除失败')
+    }
+  }
 }
 </script>
 
@@ -1342,6 +1332,51 @@ const deleteFile = (file) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.color-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.color-legend h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  color: #333;
+}
+
+.legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.legend-text {
+  font-size: 13px;
+  color: #666;
+}
+
+.legend-item.overlap .legend-text {
+  font-weight: 600;
+  color: #d97706;
 }
 
 .visualization-content {

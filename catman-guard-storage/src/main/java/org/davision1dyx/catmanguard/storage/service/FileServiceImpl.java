@@ -18,10 +18,13 @@ import org.davision1dyx.catmanguard.file.enums.FileMode;
 import org.davision1dyx.catmanguard.file.properties.FileProperties;
 import org.davision1dyx.catmanguard.storage.convertor.FileChunkConvertor;
 import org.davision1dyx.catmanguard.storage.convertor.FileInfoConvertor;
+import org.davision1dyx.catmanguard.storage.enums.ChunkType;
 import org.davision1dyx.catmanguard.storage.enums.FileStatus;
 import org.davision1dyx.catmanguard.storage.handle.reader.ReaderHandler;
 import org.davision1dyx.catmanguard.storage.handle.recognition.RecognitionHandler;
 import org.davision1dyx.catmanguard.storage.handle.storage.StorageHandler;
+import org.davision1dyx.catmanguard.storage.handle.transform.DocumentChunkHandler;
+import org.davision1dyx.catmanguard.storage.handle.transform.DocumentCleanHandler;
 import org.davision1dyx.catmanguard.storage.handle.transform.OverlapParagraphTextSplitHandler;
 import org.davision1dyx.catmanguard.storage.mapper.FileInfoMapper;
 import org.davision1dyx.catmanguard.storage.model.FileChunk;
@@ -59,19 +62,19 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
     private final RecognitionHandler recognitionHandler;
     private final ReaderHandler readerHandler;
     private final MultiModalService multiModalService;
-    private final ChunkServiceImpl fileChunkService;
+    private final ChunkServiceImpl chunkService;
     private final KnowledgeService knowledgeService;
 
     @Autowired(required = false)
     private MinioClient minioClient;
 
-    public FileServiceImpl(FileProperties fileProperties, StorageHandler storageHandler, RecognitionHandler recognitionHandler, ReaderHandler readerHandler, MultiModalService multiModalService, ChunkServiceImpl fileChunkService, KnowledgeService knowledgeService) {
+    public FileServiceImpl(FileProperties fileProperties, StorageHandler storageHandler, RecognitionHandler recognitionHandler, ReaderHandler readerHandler, MultiModalService multiModalService, ChunkServiceImpl chunkService, KnowledgeService knowledgeService) {
         this.fileProperties = fileProperties;
         this.storageHandler = storageHandler;
         this.recognitionHandler = recognitionHandler;
         this.readerHandler = readerHandler;
         this.multiModalService = multiModalService;
-        this.fileChunkService = fileChunkService;
+        this.chunkService = chunkService;
         this.knowledgeService = knowledgeService;
     }
 
@@ -88,11 +91,15 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
         // 1. 源文件存储到存储介质
         FileMode mode = fileProperties.getMode();
         StorageHandleInfo storageHandleInfo = storageHandler.handleUpload(fileUploadDTO.getFile(), mode);
-
+        log.info("上传到存储介质: {}", storageHandleInfo.getUrl());
         // 2. 保存文件信息到数据库
         FileInfo fileInfo = FileInfoConvertor.INSTANCE.mapToModel(fileUploadDTO, storageHandleInfo.getFileName(),
                 storageHandleInfo.getUrl(), mode);
         save(fileInfo);
+        log.info("文件上传完成，记录文件信息，知识库信息");
+        // 3. 更新知识库文件数量
+        knowledgeService.updateFileCount(fileUploadDTO.getKnowledgeId(), 1);
+
         return FileUploadVO.build(fileInfo.getFileId(), fileInfo.getUrl(), fileInfo.getStatus(), size);
     }
 
@@ -142,10 +149,29 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
     public void delete(String fileId) {
         log.info("开始删除文件, fileId: {}", fileId);
 
-        LambdaQueryWrapper<FileInfo> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(FileInfo::getFileId, fileId);
-        remove(queryWrapper);
-        // TODO 对storage进行删除
+        FileInfo fileInfo = getOne(new LambdaQueryWrapper<FileInfo>().eq(FileInfo::getFileId, fileId));
+        if (fileInfo == null) {
+            return;
+        }
+
+        String knowledgeId = fileInfo.getKnowledgeId();
+
+        long chunkCount = chunkService.count(new LambdaQueryWrapper<FileChunk>()
+                .eq(FileChunk::getFileId, fileId));
+
+        remove(new LambdaQueryWrapper<FileInfo>().eq(FileInfo::getFileId, fileId));
+
+        chunkService.remove(new LambdaQueryWrapper<FileChunk>()
+                .eq(FileChunk::getFileId, fileId));
+
+        if (knowledgeId != null) {
+            knowledgeService.updateFileCount(knowledgeId, -1);
+            knowledgeService.updateChunkCount(knowledgeId, -(int) chunkCount);
+        }
+
+        String storageType = fileInfo.getStorageType();
+        FileMode fileMode = FileMode.valueOf(storageType);
+        storageHandler.handleDelete(fileInfo.getUrl(), fileMode);
     }
 
     public FileRecognizeVO recognize(String fileId) throws IOException {
@@ -187,6 +213,7 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
         // 2.2 上传图片，建立本地文件名与图片url的映射
         log.info("找到 Markdown 文件: {}, 图片文件数量: {}", mdFile, imageFiles.size());
         Map<String, String> imageUrlMap = new HashMap<>();
+        Map<String, byte[]> imageDataMap = new HashMap<>();
         String baseObjectName = "CONVERT_" + fileInfo.getFileTitle() + "/";
 
         for (Path imagePath : imageFiles) {
@@ -197,6 +224,8 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
             StorageHandleInfo storageHandleInfo = storageHandler.handleUpload(imageBytes, objectName, contentType, fileMode);
             String imageUrl = storageHandleInfo.getUrl();
             imageUrlMap.put(imageName, imageUrl);
+            // 为避免存储介质的url为内网
+            imageDataMap.put(imageName, imageBytes);
             log.info("图片已上传 {} -> {}", imageName, imageUrl);
         }
 
@@ -204,7 +233,7 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
         String mdContent = FileUtil.readFileToString(mdFile);
 
         // 替换 md 中的图片地址为 MinIO 地址，并生成图片描述
-        String processedMdContent = processMarkdownImages(mdContent, imageUrlMap);
+        String processedMdContent = processMarkdownImages(mdContent, imageUrlMap, imageDataMap);
 
         // 上传处理后的 md 文件到 MinIO
         String mdObjectName = baseObjectName + mdFile.getFileName().toString();
@@ -239,7 +268,7 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
 
         // 2.1查找所有的 md 文件和图片文件
         Path mdFile = null;
-        java.util.List<Path> imageFiles = new java.util.ArrayList<>();
+        List<Path> imageFiles = new ArrayList<>();
 
         try (Stream<Path> paths = Files.walk(Path.of(recognizedPath))) {
             for (Path path : paths.toList()) {
@@ -280,7 +309,7 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
         String mdContent = FileUtil.readFileToString(mdFile);
 
         // 替换 md 中的图片地址为 MinIO 地址，并生成图片描述
-        String processedMdContent = processMarkdownImages(mdContent, imageUrlMap);
+        String processedMdContent = processMarkdownImages(mdContent, imageUrlMap, null);
 
         // 上传处理后的 md 文件到 MinIO
         String mdObjectName = baseObjectName + mdFile.getFileName().toString();
@@ -312,24 +341,35 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
         // 1. 下载文件
         byte[] fileBytes = storageHandler.handleDownload(fileInfo.getConvertedUrl(), fileMode);
 
-        // 2. 切分文件 // TODO 待完善切分，当前读取文件内容，只需要读取md格式
-        List<Document> documents = readerHandler.handle(fileBytes, fileInfo.getFileType());
-        List<Document> splitDocuments = new OverlapParagraphTextSplitHandler(500, 10).split(documents);
-        log.info("文件已切分, 数量: {}", splitDocuments.size());
+        // 2. 切分文件
+        // 2.1 文件读取
+        String fileType = fileInfo.getConvertedUrl() != null? FileUtil.getFileType(fileInfo.getConvertedUrl()): fileInfo.getFileType();
+        List<Document> documents = readerHandler.handle(fileBytes, fileType);
+        // 2.2 文件清理
+        List<Document> cleanedDocuments = DocumentCleanHandler.cleanDocuments(documents);
+        // 2.3 文件切分
+        String chunkType = fileSplitDTO.getChunkType();
+        List<Document> chunkedDocument = new DocumentChunkHandler(fileSplitDTO.getChunkSize(), fileSplitDTO.getChunkOverlap()).handle(cleanedDocuments, ChunkType.valueOf(chunkType));
+        log.info("文件已切分, 数量: {}", chunkedDocument.size());
 
         // 3. 保存切分结果
         List<FileChunk> fileChunks = new ArrayList<>();
-        for (int i = 0; i < splitDocuments.size(); i++) {
-            Document document = splitDocuments.get(i);
+        for (int i = 0; i < chunkedDocument.size(); i++) {
+            Document document = chunkedDocument.get(i);
             FileChunk fileChunk = FileChunkConvertor.INSTANCE.mapToModel(fileInfo.getFileId(), i, document.getText(),
                     JSON.toJSONString(document.getMetadata()), document.getId());
             fileChunks.add(fileChunk);
         }
-        fileChunkService.saveBatch(fileChunks); // 性能不足时，考虑手写批量保存逻辑
+        chunkService.saveBatch(fileChunks); // 性能不足时，考虑手写批量保存逻辑
 
         // 4. 更新状态
         fileInfo.setStatus(FileStatus.CHUNKED.name());
         updateById(fileInfo);
+
+        // 5. 更新知识库分片数量
+        if (fileInfo.getKnowledgeId() != null) {
+            knowledgeService.updateChunkCount(fileInfo.getKnowledgeId(), fileChunks.size());
+        }
 
         return FileSplitVO.build(fileChunks.size());
     }
@@ -341,15 +381,15 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
                 fileSplitDTO.getChunkSize(), fileSplitDTO.getChunkOverlap());
 
         // 文件识别
-        try {
-            recognize(fileSplitDTO.getFileId());
-        } catch (Exception e) {
-            throw new BizException(ErrorCode.ERROR, "文件识别失败", e);
-        }
+//        try {
+//            recognize(fileSplitDTO.getFileId());
+//        } catch (Exception e) {
+//            throw new BizException(ErrorCode.ERROR, "文件识别失败", e);
+//        }
 
         split(fileSplitDTO);
 
-        List<FileChunk> chunks = fileChunkService.list(new LambdaQueryWrapper<FileChunk>()
+        List<FileChunk> chunks = chunkService.list(new LambdaQueryWrapper<FileChunk>()
                 .eq(FileChunk::getFileId, fileSplitDTO.getFileId()));
 
         List<ChunkVO.ChunkItemVO> chunkItems = chunks.stream().map(c ->
@@ -368,7 +408,7 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
      * 处理 Markdown 中的图片标签：替换地址并生成图片描述
      * 匹配格式: ![](xxx.png) 或 ![alt](xxx.png)
      */
-    private String processMarkdownImages(String mdContent, java.util.Map<String, String> imageUrlMap) {
+    private String processMarkdownImages(String mdContent, Map<String, String> imageUrlMap, Map<String, byte[]> imageDataMap) {
         // 匹配图片标签的正则表达式: ![alt](path)
         Pattern pattern = Pattern.compile("!\\[(.*?)\\]\\(([^)]+)\\)");
         Matcher matcher = pattern.matcher(mdContent);
@@ -390,8 +430,9 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
                 continue;
             }
 
-            // 生成图片描述（mock 实现）
-            String imageDescription = multiModalService.generateImageDescription(minioUrl);
+            // 生成图片描述
+//            String imageDescription = multiModalService.generateImageDescription(minioUrl);
+            String imageDescription = multiModalService.generateImageDescription(imageDataMap.get(imageName));
 
             // 构建新的图片标签: ![描述](minio_url)
             String newImageTag = "![" + imageDescription + "](" + minioUrl + ")";

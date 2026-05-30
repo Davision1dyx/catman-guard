@@ -106,4 +106,42 @@ public class KnowledgeServiceImpl extends ServiceImpl<KnowledgeMapper, Knowledge
             throw new BizException(ErrorCode.ERROR, "知识库不存在");
         }
     }
+
+    @Override
+    public void updateFileCount(String knowledgeId, int delta) {
+        log.info("更新知识库文件数量, knowledgeId: {}, delta: {}", knowledgeId, delta);
+
+        Knowledge knowledge = getOne(new LambdaQueryWrapper<Knowledge>()
+                .eq(Knowledge::getKnowledgeId, knowledgeId));
+
+        if (knowledge == null) {
+            throw new BizException(ErrorCode.ERROR, "知识库不存在");
+        }
+
+        int newCount = (knowledge.getFileCount() == null ? 0 : knowledge.getFileCount()) + delta;
+        if (newCount < 0) {
+            newCount = 0;
+        }
+        knowledge.setFileCount(newCount);
+        updateById(knowledge);
+    }
+
+    @Override
+    public void updateChunkCount(String knowledgeId, int delta) {
+        log.info("更新知识库分片数量, knowledgeId: {}, delta: {}", knowledgeId, delta);
+
+        Knowledge knowledge = getOne(new LambdaQueryWrapper<Knowledge>()
+                .eq(Knowledge::getKnowledgeId, knowledgeId));
+
+        if (knowledge == null) {
+            throw new BizException(ErrorCode.ERROR, "知识库不存在");
+        }
+
+        int newCount = (knowledge.getChunkCount() == null ? 0 : knowledge.getChunkCount()) + delta;
+        if (newCount < 0) {
+            newCount = 0;
+        }
+        knowledge.setChunkCount(newCount);
+        updateById(knowledge);
+    }
 }
