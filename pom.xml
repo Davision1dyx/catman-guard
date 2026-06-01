@@ -21,8 +21,8 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring.ai.version>1.1.0</spring.ai.version>
-        <api.key>yourkey</api.key>
-        <tavily.key>yourkey</tavily.key>
+        <api.key>sk-e4945e1fd5004b71bd50e5b6395eb73b</api.key>
+        <tavily.key>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</tavily.key>
     </properties>
 
     <parent>

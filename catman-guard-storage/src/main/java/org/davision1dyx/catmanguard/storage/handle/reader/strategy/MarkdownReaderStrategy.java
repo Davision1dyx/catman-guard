@@ -7,6 +7,7 @@ import org.springframework.ai.reader.markdown.config.MarkdownDocumentReaderConfi
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -24,6 +25,7 @@ public class MarkdownReaderStrategy implements ReaderStrategy {
     @Override
     public List<Document> read(byte[] bytes) {
         MarkdownDocumentReaderConfig config = MarkdownDocumentReaderConfig.builder()
+                .withAdditionalMetadata(new HashMap<>())
                 // 水平线分割生成新文档
                 .withHorizontalRuleCreateDocument(true)
                 // 不包含代码块

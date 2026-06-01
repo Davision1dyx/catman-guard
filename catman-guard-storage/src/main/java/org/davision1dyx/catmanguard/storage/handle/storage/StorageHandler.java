@@ -8,6 +8,7 @@ import org.davision1dyx.catmanguard.storage.pojo.StorageHandleInfo;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,6 +42,11 @@ public class StorageHandler {
         Optional<byte[]> download = storageStrategies.stream().filter(strategy -> strategy.support(fileMode))
                 .map(strategy -> strategy.download(fileUrl)).findFirst();
         return download.orElseThrow(() -> new BizException(ErrorCode.NO_FILE_TYPE_SUPPORT));
+    }
+
+    public void handleDownloadToStream(String fileUrl, FileMode fileMode, OutputStream outputStream) {
+        storageStrategies.stream().filter(strategy -> strategy.support(fileMode))
+                .findFirst().ifPresent(strategy -> strategy.downloadToStream(fileUrl, outputStream));
     }
 
     public void handleDelete(String fileUrl, FileMode fileMode) {

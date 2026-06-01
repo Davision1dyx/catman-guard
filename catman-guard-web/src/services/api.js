@@ -8,6 +8,14 @@ const apiClient = axios.create({
   }
 })
 
+const longRunningApiClient = axios.create({
+  baseURL: '/processing/catman',
+  timeout: 0,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+
 apiClient.interceptors.response.use(
   response => response.data,
   error => {
@@ -80,8 +88,11 @@ export const fileApi = {
   list: (knowledgeId, params) => apiClient.get(`/storage/file/list/${knowledgeId}`, { params }),
   delete: (fileId) => apiClient.delete(`/storage/file/${fileId}`),
   queryChunk: (params) => apiClient.get('/storage/file/queryChunk', { params }),
-  chunk: (fileId, data) => apiClient.post(`/storage/chunk/chunk/${fileId}`, data),
-  listChunks: (fileId) => apiClient.get(`/storage/chunk/list/${fileId}`)
+  chunk: (fileId, data) => longRunningApiClient.post(`/storage/chunk/chunk/${fileId}`, data),
+  listChunks: (fileId) => apiClient.get(`/storage/chunk/list/${fileId}`),
+  download: (fileId) => axios.get('/processing/catman/storage/file/download/' + fileId, {
+    responseType: 'blob'
+  })
 }
 
 export default apiClient

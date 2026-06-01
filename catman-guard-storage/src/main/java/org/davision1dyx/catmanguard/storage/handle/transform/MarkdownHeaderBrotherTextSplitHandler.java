@@ -105,6 +105,9 @@ public class MarkdownHeaderBrotherTextSplitHandler extends TextSplitter {
         Map<String, Object> currentMetadata = new HashMap<>(baseMetadata);
         List<Header> headerStack = new ArrayList<>();  // 标题栈，用于追踪当前的标题层级结构
         Map<String, Object> initialMetadata = new HashMap<>(baseMetadata);
+        // 初始化时就生成一个初始的 CHUNK_ID 和 HEADER_LEVEL，确保所有分片都有这些字段
+        initialMetadata.put(CHUNK_ID, UUID.randomUUID().toString());
+        initialMetadata.put(HEADER_LEVEL, 0);  // 0 表示无标题或根级别
 
         boolean inCodeBlock = false;  // 是否在代码块中
         String openingFence = "";     // 代码块的开始标记
@@ -205,7 +208,7 @@ public class MarkdownHeaderBrotherTextSplitHandler extends TextSplitter {
             segments = aggregateLinesToChunks(linesWithMetadata);
         } else {
             // 逐行模式：保持每行独立
-            segments = linesWithMetadata.stream()
+            segments = linesWithMetadata.stream()// TODO metaData是空，所以报错了
                     .map(line -> new Document(line.getMetadata().get(CHUNK_ID).toString(), line.getContent(), line.getMetadata()))
                     .collect(Collectors.toList());
         }

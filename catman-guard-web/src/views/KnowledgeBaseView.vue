@@ -410,6 +410,7 @@ const fetchFiles = async () => {
       knowledgeBaseId: f.knowledgeId || currentKBId.value,
       title: f.fileTitle,
       originalName: f.fileName,
+      fileUrl: f.fileUrl,
       softwareVersion: f.version || '',
       feature: f.feature || '',
       microservice: f.microservice || '',
@@ -740,17 +741,22 @@ const syncVectorDB = () => {
   ElMessage.success('向量库同步已触发')
 }
 
-const downloadFile = (file) => {
-  const blob = new Blob(['Simulated file content for ' + file.title], { type: 'application/octet-stream' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = file.originalName
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-  ElMessage.success('文件已下载')
+const downloadFile = async (file) => {
+  try {
+    const response = await fileApi.download(file.id)
+    const blob = response.data
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = file.originalName
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    ElMessage.success('文件已下载')
+  } catch (error) {
+    ElMessage.error('文件下载失败')
+  }
 }
 
 const viewChunks = async (file) => {

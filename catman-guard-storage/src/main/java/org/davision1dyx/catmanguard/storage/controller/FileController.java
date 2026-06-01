@@ -1,5 +1,6 @@
 package org.davision1dyx.catmanguard.storage.controller;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.davision1dyx.catmanguard.api.storage.dto.ChunkQueryDTO;
 import org.davision1dyx.catmanguard.api.storage.dto.FileListDTO;
@@ -9,6 +10,8 @@ import org.davision1dyx.catmanguard.api.storage.service.FileService;
 import org.davision1dyx.catmanguard.api.storage.vo.ChunkQueryVO;
 import org.davision1dyx.catmanguard.api.storage.vo.FileListVO;
 import org.davision1dyx.catmanguard.api.storage.vo.FileUploadVO;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -88,5 +91,26 @@ public class FileController {
         ChunkQueryDTO dto = new ChunkQueryDTO();
         dto.setFileId(fileId);
         return chunkService.query(dto);
+    }
+
+    @GetMapping("/download/{fileId}")
+    public void download(@PathVariable String fileId, HttpServletResponse response) throws IOException {
+        log.info("[GET] /processing/catman/storage/file/download/{}", fileId);
+        try {
+            FileListVO fileInfo = fileService.getFileInfo(fileId);
+            String fileName = fileInfo.getFileName();
+            if (fileInfo.getExtension() != null && !fileInfo.getExtension().isEmpty()) {
+                fileName = fileName + "." + fileInfo.getExtension();
+            }
+            String encodedFileName = java.net.URLEncoder.encode(fileName, "UTF-8").replaceAll("\\+", "%20");
+            response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+            response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFileName + "\"");
+            fileService.downloadToStream(fileId, response.getOutputStream());
+        } catch (Exception e) {
+            log.error("文件下载失败, fileId: {}", fileId, e);
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.setContentType("text/plain;charset=UTF-8");
+            response.getWriter().write("文件下载失败");
+        }
     }
 }

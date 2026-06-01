@@ -4,6 +4,8 @@ import org.davision1dyx.catmanguard.file.enums.FileMode;
 import org.davision1dyx.catmanguard.storage.pojo.StorageHandleInfo;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.OutputStream;
+
 /**
  * @author Davison
  * @date 2026-05-01
@@ -18,6 +20,8 @@ public interface StorageStrategy {
     StorageHandleInfo upload(byte[] bytes, String fileName, String contentType);
 
     byte[] download(String fileUrl);
+
+    void downloadToStream(String fileUrl, OutputStream outputStream);
 
     void delete(String fileUrl);
 }

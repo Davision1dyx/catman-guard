@@ -25,7 +25,7 @@ import org.davision1dyx.catmanguard.storage.handle.recognition.RecognitionHandle
 import org.davision1dyx.catmanguard.storage.handle.storage.StorageHandler;
 import org.davision1dyx.catmanguard.storage.handle.transform.DocumentChunkHandler;
 import org.davision1dyx.catmanguard.storage.handle.transform.DocumentCleanHandler;
-import org.davision1dyx.catmanguard.storage.handle.transform.OverlapParagraphTextSplitHandler;
+import org.davision1dyx.catmanguard.storage.handle.transform.MarkdownHeaderBrotherTextSplitHandler;
 import org.davision1dyx.catmanguard.storage.mapper.FileInfoMapper;
 import org.davision1dyx.catmanguard.storage.model.FileChunk;
 import org.davision1dyx.catmanguard.storage.model.FileInfo;
@@ -39,6 +39,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -68,7 +69,10 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
     @Autowired(required = false)
     private MinioClient minioClient;
 
-    public FileServiceImpl(FileProperties fileProperties, StorageHandler storageHandler, RecognitionHandler recognitionHandler, ReaderHandler readerHandler, MultiModalService multiModalService, ChunkServiceImpl chunkService, KnowledgeService knowledgeService) {
+    public FileServiceImpl(FileProperties fileProperties, StorageHandler storageHandler,
+                           RecognitionHandler recognitionHandler, ReaderHandler readerHandler,
+                           MultiModalService multiModalService, ChunkServiceImpl chunkService,
+                           KnowledgeService knowledgeService) {
         this.fileProperties = fileProperties;
         this.storageHandler = storageHandler;
         this.recognitionHandler = recognitionHandler;
@@ -126,21 +130,8 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
 
         List<FileInfo> fileInfoList = list(queryWrapper);
 
-        List<FileListVO> data = fileInfoList.stream().map(f -> {
-            return FileListVO.build(
-                    f.getFileId(),
-                    f.getFileTitle(),
-                    f.getFileName(),
-                    "",
-                    f.getExtension(),
-                    f.getDescription(),
-                    "",
-                    f.getStatus(),
-                    0L,
-                    f.getCreateTime(),
-                    f.getUpdateTime()
-            );
-        }).collect(java.util.stream.Collectors.toList());
+        List<FileListVO> data = fileInfoList.stream().map(FileInfoConvertor.INSTANCE::mapToVo)
+                .collect(java.util.stream.Collectors.toList());
 
         return data;
     }
@@ -344,12 +335,13 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
         // 2. 切分文件
         // 2.1 文件读取
         String fileType = fileInfo.getConvertedUrl() != null? FileUtil.getFileType(fileInfo.getConvertedUrl()): fileInfo.getFileType();
-        List<Document> documents = readerHandler.handle(fileBytes, fileType);
+//        List<Document> documents = readerHandler.handle(fileBytes, fileType);
         // 2.2 文件清理
-        List<Document> cleanedDocuments = DocumentCleanHandler.cleanDocuments(documents);
+//        List<Document> cleanedDocuments = DocumentCleanHandler.cleanDocuments(documents);
         // 2.3 文件切分
-        String chunkType = fileSplitDTO.getChunkType();
-        List<Document> chunkedDocument = new DocumentChunkHandler(fileSplitDTO.getChunkSize(), fileSplitDTO.getChunkOverlap()).handle(cleanedDocuments, ChunkType.valueOf(chunkType));
+//        String chunkType = fileSplitDTO.getChunkType();
+//        List<Document> chunkedDocument = new DocumentChunkHandler(fileSplitDTO.getChunkSize(), fileSplitDTO.getChunkOverlap()).handle(cleanedDocuments, ChunkType.of(chunkType));
+        List<Document> chunkedDocument = new MarkdownHeaderBrotherTextSplitHandler(fileSplitDTO.getChunkSize(), fileSplitDTO.getChunkOverlap()).split(Document.builder().text(new String(fileBytes, StandardCharsets.UTF_8)).build());
         log.info("文件已切分, 数量: {}", chunkedDocument.size());
 
         // 3. 保存切分结果
@@ -381,11 +373,11 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
                 fileSplitDTO.getChunkSize(), fileSplitDTO.getChunkOverlap());
 
         // 文件识别
-//        try {
-//            recognize(fileSplitDTO.getFileId());
-//        } catch (Exception e) {
-//            throw new BizException(ErrorCode.ERROR, "文件识别失败", e);
-//        }
+        try {
+            recognize(fileSplitDTO.getFileId());
+        } catch (Exception e) {
+            throw new BizException(ErrorCode.ERROR, "文件识别失败", e);
+        }
 
         split(fileSplitDTO);
 
@@ -400,8 +392,24 @@ public class FileServiceImpl extends ServiceImpl<FileInfoMapper, FileInfo> imple
     }
 
     @Override
-    public void download(String fileUrl) {
+    public FileListVO getFileInfo(String fileId) {
+        log.info("获取文件信息, fileId: {}", fileId);
+        FileInfo fileInfo = getOne(new LambdaQueryWrapper<FileInfo>().eq(FileInfo::getFileId, fileId));
+        if (fileInfo == null) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "文件不存在");
+        }
+        return FileInfoConvertor.INSTANCE.mapToVo(fileInfo);
+    }
 
+    @Override
+    public void downloadToStream(String fileId, OutputStream outputStream) {
+        log.info("开始流式下载文件, fileId: {}", fileId);
+        FileInfo fileInfo = getOne(new LambdaQueryWrapper<FileInfo>().eq(FileInfo::getFileId, fileId));
+        if (fileInfo == null) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "文件不存在");
+        }
+        FileMode fileMode = FileMode.valueOf(fileInfo.getStorageType());
+        storageHandler.handleDownloadToStream(fileInfo.getUrl(), fileMode, outputStream);
     }
 
     /**

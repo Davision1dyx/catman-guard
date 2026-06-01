@@ -25,4 +25,13 @@ public enum ChunkType {
     }
 
     public final String value;
+
+    public static ChunkType of(String value) {
+        for (ChunkType type : ChunkType.values()) {
+            if (type.value.equalsIgnoreCase(value)) {
+                return type;
+            }
+        }
+        throw new IllegalArgumentException("Unknown chunk type: " + value);
+    }
 }

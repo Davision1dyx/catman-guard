@@ -11,6 +11,7 @@ import org.davision1dyx.catmanguard.api.storage.vo.FileSplitVO;
 import org.davision1dyx.catmanguard.api.storage.vo.FileUploadVO;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 
 /**
@@ -44,8 +45,16 @@ public interface FileService {
     ChunkVO chunk(FileSplitDTO fileSplitDTO);
 
     /**
-     * 文件下载
-     *
+     * 获取文件信息
+     * @param fileId 文件ID
+     * @return 文件信息VO
      */
-    void download(String fileUrl);
+    FileListVO getFileInfo(String fileId);
+
+    /**
+     * 流式文件下载
+     * @param fileId 文件ID
+     * @param outputStream 输出流
+     */
+    void downloadToStream(String fileId, OutputStream outputStream);
 }

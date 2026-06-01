@@ -16,6 +16,7 @@ public class FileListVO {
     private String fileId;
     private String fileTitle;
     private String fileName;
+    private String fileUrl;
     private String version;
     private String extension;
     private String description;
@@ -25,7 +26,7 @@ public class FileListVO {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
-    public static FileListVO build(String fileId, String fileTitle, String fileName, String version,
+    public static FileListVO build(String fileId, String fileTitle, String fileName, String fileUrl, String version,
                                    String extension, String description, String microservice,
                                    String status, Long size, java.time.LocalDateTime createTime,
                                    java.time.LocalDateTime updateTime) {
@@ -33,6 +34,7 @@ public class FileListVO {
         item.setFileId(fileId);
         item.setFileTitle(fileTitle);
         item.setFileName(fileName);
+        item.setFileUrl(fileUrl);
         item.setVersion(version);
         item.setExtension(extension);
         item.setDescription(description);
