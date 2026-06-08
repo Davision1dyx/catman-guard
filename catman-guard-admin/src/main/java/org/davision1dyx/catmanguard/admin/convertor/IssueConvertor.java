@@ -23,6 +23,7 @@ public interface IssueConvertor {
     @Mapping(source = "assigneeId", target = "assigneeId")
     @Mapping(source = "assigneeName", target = "assigneeName")
     @Mapping(source = "assigneeEmail", target = "assigneeEmail")
+    @Mapping(source = "knowledgeId", target = "knowledgeId")
     @Mapping(source = "createTime", target = "createdTime")
     @Mapping(source = "updateTime", target = "updatedTime")
     IssueVO mapToVO(Issue issue);
@@ -34,6 +35,7 @@ public interface IssueConvertor {
     @Mapping(source = "assigneeId", target = "assigneeId")
     @Mapping(source = "assigneeName", target = "assigneeName")
     @Mapping(source = "assigneeEmail", target = "assigneeEmail")
+    @Mapping(source = "knowledgeId", target = "knowledgeId")
     @Mapping(source = "createTime", target = "createdTime")
     @Mapping(source = "updateTime", target = "updatedTime")
     IssueDetailVO mapToDetailVO(Issue issue);

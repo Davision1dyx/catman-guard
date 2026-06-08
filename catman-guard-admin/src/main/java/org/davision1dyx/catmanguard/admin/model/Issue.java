@@ -85,4 +85,22 @@ public class Issue extends BaseModel {
      */
     @TableField("assignee_email")
     private String assigneeEmail;
+
+    /**
+     * 关联知识库ID
+     */
+    @TableField("knowledge_id")
+    private String knowledgeId;
+
+    /**
+     * 工单摘要（自动生成）
+     */
+    @TableField("summary")
+    private String summary;
+
+    /**
+     * 问题归因（自动生成）
+     */
+    @TableField("root_cause")
+    private String rootCause;
 }

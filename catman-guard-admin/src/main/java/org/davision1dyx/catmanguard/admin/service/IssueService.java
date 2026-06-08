@@ -5,10 +5,13 @@ import org.davision1dyx.catmanguard.admin.model.Issue;
 import org.davision1dyx.catmanguard.api.admin.dto.AssignIssueDTO;
 import org.davision1dyx.catmanguard.api.admin.dto.CreateIssueDTO;
 import org.davision1dyx.catmanguard.api.admin.dto.IssueListDTO;
+import org.davision1dyx.catmanguard.api.admin.dto.LinkIssueKnowledgeDTO;
 import org.davision1dyx.catmanguard.api.admin.dto.UpdateIssueDTO;
 import org.davision1dyx.catmanguard.api.admin.vo.CreateIssueVO;
+import org.davision1dyx.catmanguard.api.admin.vo.HotIssueListVO;
 import org.davision1dyx.catmanguard.api.admin.vo.IssueDetailVO;
 import org.davision1dyx.catmanguard.api.admin.vo.IssueListVO;
+import org.davision1dyx.catmanguard.api.admin.vo.IssueVectorizeVO;
 import org.davision1dyx.catmanguard.api.admin.vo.UpdateIssueVO;
 
 /**
@@ -69,4 +72,26 @@ public interface IssueService extends IService<Issue> {
      * @return 是否更新成功
      */
     boolean updateIssueStatus(String issueId, String status);
+
+    /**
+     * 工单关联知识库
+     * @param issueId 工单ID
+     * @param dto 关联参数
+     * @return 是否关联成功
+     */
+    boolean linkKnowledge(String issueId, LinkIssueKnowledgeDTO dto);
+
+    /**
+     * 工单向量化
+     * @param issueId 工单ID
+     * @return 向量化结果
+     */
+    IssueVectorizeVO vectorizeIssue(String issueId);
+
+    /**
+     * 识别热点工单
+     * @param topN 返回数量
+     * @return 热点工单列表
+     */
+    HotIssueListVO identifyHotIssues(Integer topN);
 }

@@ -133,6 +133,9 @@ CREATE TABLE issue (
     assignee_id VARCHAR(255),
     assignee_name VARCHAR(255),
     assignee_email VARCHAR(255),
+    knowledge_id VARCHAR(255),
+    summary TEXT,
+    root_cause TEXT,
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     lock_version INT DEFAULT 0,
@@ -143,6 +146,7 @@ CREATE TABLE issue (
 CREATE UNIQUE INDEX uk_issue_id ON issue(issue_id);
 CREATE INDEX idx_issue_status ON issue(status);
 CREATE INDEX idx_issue_priority ON issue(priority);
+CREATE INDEX idx_issue_knowledge ON issue(knowledge_id);
 
 -- 字段注释
 COMMENT ON TABLE issue IS '工单表,存储工单信息';
@@ -159,10 +163,26 @@ COMMENT ON COLUMN issue.submitter_email IS '提交人邮箱';
 COMMENT ON COLUMN issue.assignee_id IS '负责人ID';
 COMMENT ON COLUMN issue.assignee_name IS '负责人姓名';
 COMMENT ON COLUMN issue.assignee_email IS '负责人邮箱';
+COMMENT ON COLUMN issue.knowledge_id IS '关联知识库ID';
+COMMENT ON COLUMN issue.summary IS '工单摘要（AI生成）';
+COMMENT ON COLUMN issue.root_cause IS '问题归因（AI生成）';
 COMMENT ON COLUMN issue.create_time IS '创建时间';
 COMMENT ON COLUMN issue.update_time IS '更新时间';
 COMMENT ON COLUMN issue.lock_version IS '锁版本';
 COMMENT ON COLUMN issue.deleted IS '是否删除';
+
+-- =============================================
+-- 初始化工单知识库 (start)
+-- =============================================
+
+-- 创建默认工单知识库（运维文档类型）
+INSERT INTO knowledge (knowledge_id, name, description, type, file_count, chunk_count, status)
+VALUES ('kb-operation-tickets', '工单知识库', '存储已解决的运维工单，用于智能问答检索', 'operation', 0, 0, 'ACTIVE')
+ON CONFLICT (knowledge_id) DO NOTHING;
+
+-- =============================================
+-- 初始化工单知识库 (end)
+-- =============================================
 
 -- 值班人员表
 CREATE TABLE staff (

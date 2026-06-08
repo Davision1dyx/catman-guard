@@ -44,7 +44,9 @@ export const issueApi = {
   update: (issueId, data) => apiClient.put(`/admin/issue/${issueId}`, data),
   delete: (issueId) => apiClient.delete(`/admin/issue/${issueId}`),
   assign: (issueId, data) => apiClient.post(`/admin/issue/assign/${issueId}`, data),
-  updateStatus: (issueId, data) => apiClient.post(`/admin/issue/status/${issueId}`, data)
+  updateStatus: (issueId, data) => apiClient.post(`/admin/issue/status/${issueId}`, data),
+  linkKnowledge: (issueId, data) => apiClient.post(`/admin/issue/linkKnowledge/${issueId}`, data),
+  vectorize: (issueId) => apiClient.post(`/admin/issue/vectorize/${issueId}`)
 }
 
 export const scheduleApi = {

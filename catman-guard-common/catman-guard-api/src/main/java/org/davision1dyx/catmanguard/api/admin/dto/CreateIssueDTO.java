@@ -44,4 +44,9 @@ public class CreateIssueDTO {
      * 提交人邮箱
      */
     private String submitterEmail;
+
+    /**
+     * 关联知识库ID（可选，默认关联工单知识库）
+     */
+    private String knowledgeId;
 }

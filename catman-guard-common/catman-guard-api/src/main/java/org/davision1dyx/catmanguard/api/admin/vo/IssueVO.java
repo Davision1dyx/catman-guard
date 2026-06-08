@@ -73,6 +73,21 @@ public class IssueVO {
     private String assigneeEmail;
 
     /**
+     * 关联知识库ID
+     */
+    private String knowledgeId;
+
+    /**
+     * 工单摘要
+     */
+    private String summary;
+
+    /**
+     * 问题归因
+     */
+    private String rootCause;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createdTime;

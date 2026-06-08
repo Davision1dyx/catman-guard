@@ -5,11 +5,14 @@ import org.davision1dyx.catmanguard.admin.service.IssueService;
 import org.davision1dyx.catmanguard.api.admin.dto.AssignIssueDTO;
 import org.davision1dyx.catmanguard.api.admin.dto.CreateIssueDTO;
 import org.davision1dyx.catmanguard.api.admin.dto.IssueListDTO;
+import org.davision1dyx.catmanguard.api.admin.dto.LinkIssueKnowledgeDTO;
 import org.davision1dyx.catmanguard.api.admin.dto.UpdateIssueDTO;
 import org.davision1dyx.catmanguard.api.admin.dto.UpdateIssueStatusDTO;
 import org.davision1dyx.catmanguard.api.admin.vo.CreateIssueVO;
+import org.davision1dyx.catmanguard.api.admin.vo.HotIssueListVO;
 import org.davision1dyx.catmanguard.api.admin.vo.IssueDetailVO;
 import org.davision1dyx.catmanguard.api.admin.vo.IssueListVO;
+import org.davision1dyx.catmanguard.api.admin.vo.IssueVectorizeVO;
 import org.davision1dyx.catmanguard.api.admin.vo.OperationResultVO;
 import org.davision1dyx.catmanguard.api.admin.vo.UpdateIssueVO;
 import org.springframework.web.bind.annotation.*;
@@ -117,5 +120,33 @@ public class IssueController {
         log.info("[POST] /processing/catman/admin/issue/store/{}", issueId);
         boolean updated = issueService.updateIssueStatus(issueId, "VECTOR_STORED");
         return OperationResultVO.builder().success(updated).build();
+    }
+
+    /**
+     * 工单关联知识库
+     */
+    @PostMapping("/linkKnowledge/{issueId}")
+    public OperationResultVO linkKnowledge(@PathVariable String issueId, @RequestBody LinkIssueKnowledgeDTO dto) {
+        log.info("[POST] /processing/catman/admin/issue/linkKnowledge/{}", issueId);
+        boolean linked = issueService.linkKnowledge(issueId, dto);
+        return OperationResultVO.builder().success(linked).build();
+    }
+
+    /**
+     * 工单向量化
+     */
+    @PostMapping("/vectorize/{issueId}")
+    public IssueVectorizeVO vectorize(@PathVariable String issueId) {
+        log.info("[POST] /processing/catman/admin/issue/vectorize/{}", issueId);
+        return issueService.vectorizeIssue(issueId);
+    }
+
+    /**
+     * 识别热点工单
+     */
+    @GetMapping("/hot")
+    public HotIssueListVO getHotIssues(@RequestParam(defaultValue = "10") Integer topN) {
+        log.info("[GET] /processing/catman/admin/issue/hot?topN={}", topN);
+        return issueService.identifyHotIssues(topN);
     }
 }

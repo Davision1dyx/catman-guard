@@ -464,6 +464,7 @@ interface Ticket {
  updatedAt: Date;
  attachments: Attachment[];
  replies: Reply[];
+ knowledgeId?: string;
 }
 
 interface Attachment {
@@ -551,7 +552,8 @@ const fetchTickets = async () => {
         createdAt: new Date(item.createdTime),
         updatedAt: new Date(item.updatedTime),
         attachments: [],
-        replies: []
+        replies: [],
+        knowledgeId: item.knowledgeId
       }))
     }
   } catch (error) {
@@ -891,12 +893,16 @@ const storeVector = async () => {
  if (!currentTicket.value)
  return;
  try {
- await issueApi.updateStatus(currentTicket.value.id, {
- status: 'VECTOR_STORED'
- })
+ const result = await issueApi.vectorize(currentTicket.value.id)
+ const data = result.data || result
+ if (data.success) {
  await fetchTickets()
- ElMessage.success('向量存储成功');
+ ElMessage.success(`向量存储成功，已生成${data.chunkSize}个知识片段`);
+ } else {
+ ElMessage.error(data.errorMessage || '向量存储失败');
+ }
  } catch (error) {
+ console.error('Vectorize failed:', error)
  ElMessage.error('向量存储失败');
  }
  closeTicketDetailModal();
